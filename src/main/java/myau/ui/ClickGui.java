@@ -50,6 +50,7 @@ public class ClickGui extends GuiScreen {
         List<Module> movementModules = new ArrayList<>();
         movementModules.add(Myau.moduleManager.getModule(AntiAFK.class));
         movementModules.add(Myau.moduleManager.getModule(Fly.class));
+        movementModules.add(Myau.moduleManager.getModule(FastBow.class));
         movementModules.add(Myau.moduleManager.getModule(Timer.class));
         movementModules.add(Myau.moduleManager.getModule(Speed.class));
         movementModules.add(Myau.moduleManager.getModule(LongJump.class));
@@ -67,6 +68,7 @@ public class ClickGui extends GuiScreen {
         List<Module> renderModules = new ArrayList<>();
         renderModules.add(Myau.moduleManager.getModule(ESP.class));
         renderModules.add(Myau.moduleManager.getModule(Chams.class));
+        renderModules.add(Myau.moduleManager.getModule(SwingSpeed.class));
         renderModules.add(Myau.moduleManager.getModule(FullBright.class));
         renderModules.add(Myau.moduleManager.getModule(Tracers.class));
         renderModules.add(Myau.moduleManager.getModule(NameTags.class));

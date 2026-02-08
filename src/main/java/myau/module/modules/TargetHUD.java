@@ -165,7 +165,6 @@ public class TargetHUD extends Module {
 // Add Winning/Losing label to the name using calculateWinning()
                 float winningValue = calculateWinning();
                 String winLabel = winningValue > 0.0F ? "&aWinning:&r " : "&cLosing:&r ";
-
                 int targetNameWidth = mc.fontRendererObj.getStringWidth(targetNameText);
                 String healthText = ChatColors.formatColor(
                         String.format("&r&f%s%s❤&r", healthFormat.format(heal), abs > 0.0F ? "&6" : "&c")
