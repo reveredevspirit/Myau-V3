@@ -282,33 +282,53 @@ public class Tracers extends Module {
                     break;
 
                 case 3: // Slinky — solid wide filled arrow (matches screenshot style)
-                    final float halfWidth = 9.0F;   // total width ~18 px — wider than tall
-                    final float height    = 11.0F;  // tip to base — slightly taller than caret/triangle
-                    GL11.glEnable(GL11.GL_BLEND);
-                    GL11.glDisable(GL11.GL_TEXTURE_2D);
-                    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+    final float halfWidth = 12.0F;   // total base width ~24 px — noticeably wider
+    final float height    = 10.0F;   // tip-to-base height — balanced but not too tall
+    final float tipInset  = 1.5F;    // slight inward curve at tip for softer point
 
-                    // Solid fill — main body
-                    GL11.glColor4f(red, green, blue, alpha);
-                    GL11.glBegin(GL11.GL_TRIANGLES);
-                    GL11.glVertex2f(0.0F, -height);       // tip
-                    GL11.glVertex2f(-halfWidth, 0.0F);    // base left
-                    GL11.glVertex2f(halfWidth, 0.0F);     // base right
-                    GL11.glEnd();
+    GL11.glEnable(GL11.GL_BLEND);
+    GL11.glDisable(GL11.GL_TEXTURE_2D);
+    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
 
-                    // Thin dark outline (Slinky-like contrast)
-                    float darken = 0.40F;
-                    GL11.glColor4f(red * darken, green * darken, blue * darken, alpha);
-                    GL11.glLineWidth(1.2F);
-                    GL11.glBegin(GL11.GL_LINE_LOOP);
-                    GL11.glVertex2f(0.0F, -height);
-                    GL11.glVertex2f(-halfWidth, 0.0F);
-                    GL11.glVertex2f(halfWidth, 0.0F);
-                    GL11.glEnd();
+    // Solid main fill (bright color)
+    GL11.glColor4f(red, green, blue, alpha);
+    GL11.glBegin(GL11.GL_TRIANGLES);
+    // Tip (center)
+    GL11.glVertex2f(0.0F, -height);
+    // Base left
+    GL11.glVertex2f(-halfWidth, 0.0F);
+    // Base right
+    GL11.glVertex2f(halfWidth, 0.0F);
+    GL11.glEnd();
 
-                    GL11.glEnable(GL11.GL_TEXTURE_2D);
-                    GL11.glDisable(GL11.GL_BLEND);
-                    break;
+    // Optional: very subtle inner gradient / highlight (Slinky sometimes has faint shine)
+    // You can skip this if you want pure solid
+    float highlight = 0.15F;
+    GL11.glColor4f(
+        Math.min(1.0f, red   + highlight),
+        Math.min(1.0f, green + highlight),
+        Math.min(1.0f, blue  + highlight),
+        alpha * 0.6f
+    );
+    GL11.glBegin(GL11.GL_TRIANGLES);
+    GL11.glVertex2f(0.0F, -height + tipInset);           // raised tip
+    GL11.glVertex2f(-halfWidth * 0.7F, -2.0F);           // left highlight
+    GL11.glVertex2f( halfWidth * 0.7F, -2.0F);           // right highlight
+    GL11.glEnd();
+
+    // Thin dark outline (crisp Slinky contrast)
+    float darken = 0.35F;  // darker than before for better pop
+    GL11.glColor4f(red * darken, green * darken, blue * darken, alpha);
+    GL11.glLineWidth(1.4F);
+    GL11.glBegin(GL11.GL_LINE_LOOP);
+    GL11.glVertex2f(0.0F, -height);
+    GL11.glVertex2f(-halfWidth, 0.0F);
+    GL11.glVertex2f(halfWidth, 0.0F);
+    GL11.glEnd();
+
+    GL11.glEnable(GL11.GL_TEXTURE_2D);
+    GL11.glDisable(GL11.GL_BLEND);
+    break;
             }
 
             RenderUtil.disableRenderState();
