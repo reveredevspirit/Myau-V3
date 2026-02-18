@@ -45,7 +45,7 @@ import java.util.stream.Collectors;
  *            random duration (up to "Max lag duration") so the server sees the
  *            sword as blocked for longer than the client holds it.
  *
- * All three modes share the timing, range, condition and animation properties.
+ * 
  */
 public class AutoBlock extends Module {
 
