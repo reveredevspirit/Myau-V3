@@ -80,10 +80,17 @@ public class Autoblock extends Module {
             return;
         }
 
-        if (blockTicks < maxHoldDuration.getValue()) {
-            startBlocking();
-            blockTicks++;
-        }
+        // If attacking, unblock so hits register
+if (mc.gameSettings.keyBindAttack.isKeyDown()) {
+    stopBlocking();
+    return;
+}
+
+// Normal autoblock logic
+if (blockTicks < maxHoldDuration.getValue()) {
+    startBlocking();
+    blockTicks++;
+}
 
         if (blockTicks > 0 && distance > realRange + 0.5) {
             blockTicks--;
