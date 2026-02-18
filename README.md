@@ -22,4 +22,5 @@ If you encounter an issue or have a feature suggestion, please [create an issue]
 
 Shoutout ksyz, original openmyau devs etc.
 
-"# OpenMyau-v3" 
+By Spirit
+@spiritualizes on discord
