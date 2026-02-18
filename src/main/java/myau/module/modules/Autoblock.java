@@ -75,7 +75,10 @@ public class Autoblock extends Module {
     private boolean canAutoblock() {
         if (!ItemUtil.isHoldingSword()) return false;
         if (this.requirePress.getValue() && !PlayerUtil.isUsingItem()) return false;
-        if (this.requireAttack.getValue() && !KillAura.isAttacking) return false;
+        if (this.requireAttack.getValue() 
+            && !((KillAura) Myau.moduleManager.modules.get(KillAura.class)).isAttackAllowed()) 
+                return false;
+
         return true;
     }
 
@@ -253,8 +256,9 @@ public class Autoblock extends Module {
                         break;
 
                     case 2:
-                        if (KillAura.isAttacking)
-                            this.blockTick = 0;
+                    if (((KillAura) Myau.moduleManager.modules.get(KillAura.class)).isAttackAllowed())
+                        this.blockTick = 0;
+
                         break;
                 }
 
