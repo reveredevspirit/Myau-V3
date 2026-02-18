@@ -60,7 +60,9 @@ public class KillAura extends Module {
     private long attackDelayMS = 0L;
     private int lastTickProcessed;
     private boolean isPlayerTarget(EntityLivingBase entity) {
-    return entity instanceof EntityPlayer && TeamUtil.isTarget((EntityPlayer) entity);
+    return entity != null && entity != mc.thePlayer;
+}
+
 }
 
     // Removed ALL autoblock fields
