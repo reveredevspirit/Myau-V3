@@ -43,9 +43,21 @@ public class Autoblock extends Module {
 
         this.mode = new ModeProperty(
                 "mode",
-                2,
-                new String[]{"NONE", "VANILLA", "SPOOF", "HYPIXEL", "BLINK", "INTERACT", "SWAP", "LEGIT", "FAKE"}
+                0,
+                new String[]{
+                        "NONE",
+                        "VANILLA",
+                        "SPOOF",
+                        "HYPIXEL",
+                        "BLINK",
+                        "INTERACT",
+                        "SWAP",
+                        "LEGIT",
+                        "FAKE",
+                        "LAGRANGE"
+                }
         );
+
         this.requirePress = new BooleanProperty("require-press", false);
         this.requireAttack = new BooleanProperty("require-attack", false);
         this.blockRange = new FloatProperty("block-range", 6.0F, 3.0F, 8.0F);
@@ -54,7 +66,10 @@ public class Autoblock extends Module {
     }
 
     private long getBlockDelay() {
-        return (long) (1000.0F / RandomUtil.nextLong(this.minCPS.getValue().longValue(), this.maxCPS.getValue().longValue()));
+        return (long) (1000.0F / RandomUtil.nextLong(
+                this.minCPS.getValue().longValue(),
+                this.maxCPS.getValue().longValue()
+        ));
     }
 
     private boolean canAutoblock() {
@@ -65,13 +80,11 @@ public class Autoblock extends Module {
     }
 
     private boolean hasValidTarget() {
-        return mc.theWorld
-                .loadedEntityList
-                .stream()
-                .anyMatch(
-                        entity -> entity instanceof net.minecraft.entity.EntityLivingBase
-                                && RotationUtil.distanceToEntity((net.minecraft.entity.EntityLivingBase) entity) <= this.blockRange.getValue()
-                );
+        return mc.theWorld.loadedEntityList.stream().anyMatch(
+                entity -> entity instanceof net.minecraft.entity.EntityLivingBase
+                        && RotationUtil.distanceToEntity((net.minecraft.entity.EntityLivingBase) entity)
+                        <= this.blockRange.getValue()
+        );
     }
 
     private void startBlock(ItemStack stack) {
@@ -92,13 +105,15 @@ public class Autoblock extends Module {
     }
 
     private int findEmptySlot(int currentSlot) {
-        for (int i = 0; i < 9; i++) {
-            if (i != currentSlot && mc.thePlayer.inventory.getStackInSlot(i) == null) return i;
-        }
+        for (int i = 0; i < 9; i++)
+            if (i != currentSlot && mc.thePlayer.inventory.getStackInSlot(i) == null)
+                return i;
+
         for (int i = 0; i < 9; i++) {
             if (i != currentSlot) {
                 ItemStack stack = mc.thePlayer.inventory.getStackInSlot(i);
-                if (stack != null && !stack.hasDisplayName()) return i;
+                if (stack != null && !stack.hasDisplayName())
+                    return i;
             }
         }
         return Math.floorMod(currentSlot - 1, 9);
@@ -117,11 +132,14 @@ public class Autoblock extends Module {
             Myau.blinkManager.setBlinkState(true, BlinkModules.AUTO_BLOCK);
         }
 
-        if (event.getType() != EventType.PRE) return;
+        if (event.getType() != EventType.PRE)
+            return;
 
-        if (this.blockDelayMS > 0L) this.blockDelayMS -= 50L;
+        if (this.blockDelayMS > 0L)
+            this.blockDelayMS -= 50L;
 
         boolean canBlock = this.canAutoblock() && this.hasValidTarget();
+
         if (!canBlock) {
             Myau.blinkManager.setBlinkState(false, BlinkModules.AUTO_BLOCK);
             this.isBlocking = false;
@@ -135,184 +153,113 @@ public class Autoblock extends Module {
         switch (this.mode.getValue()) {
 
             case 0: // NONE
-                if (PlayerUtil.isUsingItem()) {
-                    this.isBlocking = true;
-                    if (!this.blockingState && !Myau.playerStateManager.digging && !Myau.playerStateManager.placing)
-                        swap = true;
-                } else {
-                    this.isBlocking = false;
-                    if (this.blockingState && !Myau.playerStateManager.digging && !Myau.playerStateManager.placing)
-                        this.stopBlock();
-                }
+                this.isBlocking = false;
                 this.fakeBlockState = false;
                 break;
 
             case 1: // VANILLA
-                if (this.hasValidTarget()) {
-                    if (!this.blockingState && !Myau.playerStateManager.digging && !Myau.playerStateManager.placing)
-                        swap = true;
-                    this.isBlocking = true;
-                    this.fakeBlockState = false;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
-                }
+                if (!this.blockingState)
+                    swap = true;
+                this.isBlocking = true;
+                this.fakeBlockState = false;
                 break;
 
             case 2: // SPOOF
-                if (this.hasValidTarget()) {
-                    int item = ((IAccessorPlayerControllerMP) mc.playerController).getCurrentPlayerItem();
-                    if (Myau.playerStateManager.digging
-                            || Myau.playerStateManager.placing
-                            || mc.thePlayer.inventory.currentItem != item
-                            || this.blockingState && this.blockTick != 0
-                            || this.blockDelayMS > 0L && this.blockDelayMS <= 50L) {
-                        this.blockTick = 0;
-                    } else {
-                        int slot = this.findEmptySlot(item);
-                        PacketUtil.sendPacket(new C09PacketHeldItemChange(slot));
-                        PacketUtil.sendPacket(new C09PacketHeldItemChange(item));
-                        swap = true;
-                        this.blockTick = 1;
-                    }
-                    this.isBlocking = true;
-                    this.fakeBlockState = false;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
-                }
+                int item = ((IAccessorPlayerControllerMP) mc.playerController).getCurrentPlayerItem();
+                int slot = this.findEmptySlot(item);
+                PacketUtil.sendPacket(new C09PacketHeldItemChange(slot));
+                PacketUtil.sendPacket(new C09PacketHeldItemChange(item));
+                swap = true;
+                this.isBlocking = true;
+                this.fakeBlockState = false;
                 break;
 
             case 3: // HYPIXEL
-                if (this.hasValidTarget()) {
-                    switch (this.blockTick) {
-                        case 0:
-                            if (!this.blockingState) swap = true;
-                            this.blockTick = 1;
-                            break;
-                        case 1:
-                            if (this.blockingState) {
-                                if (Myau.moduleManager.modules.get(NoSlow.class).isEnabled()) {
-                                    int randomSlot = new Random().nextInt(9);
-                                    while (randomSlot == mc.thePlayer.inventory.currentItem)
-                                        randomSlot = new Random().nextInt(9);
-                                    PacketUtil.sendPacket(new C09PacketHeldItemChange(randomSlot));
-                                    PacketUtil.sendPacket(new C09PacketHeldItemChange(mc.thePlayer.inventory.currentItem));
-                                }
-                                this.stopBlock();
-                            }
-                            if (this.blockDelayMS <= 50L) this.blockTick = 0;
-                            break;
-                        default:
+                switch (this.blockTick) {
+                    case 0:
+                        swap = true;
+                        this.blockTick = 1;
+                        break;
+                    case 1:
+                        if (this.blockDelayMS <= 50L)
                             this.blockTick = 0;
-                    }
-                    this.isBlocking = true;
-                    this.fakeBlockState = true;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
+                        break;
                 }
+                this.isBlocking = true;
+                this.fakeBlockState = true;
                 break;
 
             case 4: // BLINK
-                if (this.hasValidTarget()) {
-                    switch (this.blockTick) {
-                        case 0:
-                            if (!this.blockingState) swap = true;
-                            this.blinkReset = true;
-                            this.blockTick = 1;
-                            break;
-                        case 1:
-                            if (this.blockingState) this.stopBlock();
-                            if (this.blockDelayMS <= 50L) this.blockTick = 0;
-                            break;
-                        default:
+                switch (this.blockTick) {
+                    case 0:
+                        swap = true;
+                        this.blinkReset = true;
+                        this.blockTick = 1;
+                        break;
+                    case 1:
+                        if (this.blockDelayMS <= 50L)
                             this.blockTick = 0;
-                    }
-                    this.isBlocking = true;
-                    this.fakeBlockState = true;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
+                        break;
                 }
+                this.isBlocking = true;
+                this.fakeBlockState = true;
                 break;
 
             case 5: // INTERACT
-                if (this.hasValidTarget()) {
-                    int item = ((IAccessorPlayerControllerMP) mc.playerController).getCurrentPlayerItem();
-                    if (mc.thePlayer.inventory.currentItem == item) {
-                        switch (this.blockTick) {
-                            case 0:
-                                if (!this.blockingState) swap = true;
-                                this.blinkReset = true;
-                                this.blockTick = 1;
-                                break;
-                            case 1:
-                                if (this.blockingState) {
-                                    int slot = this.findEmptySlot(item);
-                                    PacketUtil.sendPacket(new C09PacketHeldItemChange(slot));
-                                    ((IAccessorPlayerControllerMP) mc.playerController).setCurrentPlayerItem(slot);
-                                }
-                                if (this.blockDelayMS <= 50L) this.blockTick = 0;
-                                break;
-                            default:
-                                this.blockTick = 0;
-                        }
-                    }
-                    this.isBlocking = true;
-                    this.fakeBlockState = true;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
-                }
+                int current = ((IAccessorPlayerControllerMP) mc.playerController).getCurrentPlayerItem();
+                int empty = this.findEmptySlot(current);
+                PacketUtil.sendPacket(new C09PacketHeldItemChange(empty));
+                ((IAccessorPlayerControllerMP) mc.playerController).setCurrentPlayerItem(empty);
+                swap = true;
+                this.isBlocking = true;
+                this.fakeBlockState = true;
                 break;
 
             case 6: // SWAP
-                if (this.hasValidTarget()) {
-                    int item = ((IAccessorPlayerControllerMP) mc.playerController).getCurrentPlayerItem();
-                    switch (this.blockTick) {
-                        case 0:
-                            if (!this.blockingState) swap = true;
-                            this.blockTick = 1;
-                            break;
-                        case 1:
-                            if (this.blockingState) {
-                                int slot = this.findEmptySlot(item);
-                                PacketUtil.sendPacket(new C09PacketHeldItemChange(slot));
-                                PacketUtil.sendPacket(new C09PacketHeldItemChange(item));
-                            }
-                            if (this.blockDelayMS <= 50L) this.blockTick = 0;
-                            break;
-                        default:
-                            this.blockTick = 0;
-                    }
-                    this.isBlocking = true;
-                    this.fakeBlockState = true;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
-                }
+                int cur = ((IAccessorPlayerControllerMP) mc.playerController).getCurrentPlayerItem();
+                int emptySlot = this.findEmptySlot(cur);
+                PacketUtil.sendPacket(new C09PacketHeldItemChange(emptySlot));
+                PacketUtil.sendPacket(new C09PacketHeldItemChange(cur));
+                swap = true;
+                this.isBlocking = true;
+                this.fakeBlockState = true;
                 break;
 
             case 7: // LEGIT
-                if (this.hasValidTarget()) {
-                    if (!this.blockingState) swap = true;
-                    this.isBlocking = true;
-                    this.fakeBlockState = true;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
-                }
+                swap = true;
+                this.isBlocking = true;
+                this.fakeBlockState = false;
                 break;
 
             case 8: // FAKE
-                if (this.hasValidTarget()) {
-                    this.isBlocking = true;
-                    this.fakeBlockState = true;
-                } else {
-                    this.isBlocking = false;
-                    this.fakeBlockState = false;
+                this.isBlocking = false;
+                this.fakeBlockState = true;
+                break;
+
+            case 9: // LAGRANGE
+                int ping = PingUtil.getPing();
+                int lagWindow = Math.min(120, Math.max(40, ping));
+
+                switch (this.blockTick) {
+                    case 0:
+                        swap = true;
+                        this.blockDelayMS = lagWindow;
+                        this.blockTick = 1;
+                        break;
+
+                    case 1:
+                        if (this.blockDelayMS <= 0L)
+                            this.blockTick = 2;
+                        break;
+
+                    case 2:
+                        if (KillAura.isAttacking)
+                            this.blockTick = 0;
+                        break;
                 }
+
+                this.isBlocking = true;
+                this.fakeBlockState = true;
                 break;
         }
 
@@ -340,7 +287,7 @@ public class Autoblock extends Module {
     }
 
     @Override
-    public void onDisable() {
+    public void onDisabled() {
         resetState();
     }
 
