@@ -159,8 +159,8 @@ public class Autoblock extends Module {
     //  Constructor
     // ═══════════════════════════════════════════════════════════════════════
 
-    public AutoBlock() {
-        super("AutoBlock", ModuleCategory.COMBAT, false);
+    public Autoblock() {
+        super("Autoblock", ModuleCategory.COMBAT, false);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
