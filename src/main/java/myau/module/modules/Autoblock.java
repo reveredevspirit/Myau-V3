@@ -60,4 +60,82 @@ public class Autoblock extends Module {
         }
 
         double distance = mc.thePlayer.getDistanceToEntity(target);
-        float realRange = range.getValue().floatValue
+        float realRange = range.getValue().floatValue() / 10f;
+
+        if (distance > realRange) {
+            stopBlocking();
+            return;
+        }
+
+        if (onlyWhenSwinging.getValue() && target.swingProgressInt <= 0) {
+            stopBlocking();
+            return;
+        }
+
+        if (mc.thePlayer.hurtTime > maxHurtTime.getValue()) {
+            stopBlocking();
+            return;
+        }
+
+        // ⭐ FIX: If left-click is held, unblock and DO NOT re-block this tick
+        if (mc.gameSettings.keyBindAttack.isKeyDown()) {
+            stopBlocking();
+            return;
+        }
+
+        // ⭐ Normal autoblock logic
+        if (blockTicks < maxHoldDuration.getValue()) {
+            startBlocking();
+            blockTicks++;
+        } else {
+            stopBlocking();
+        }
+    }
+
+    private boolean isHoldingSword() {
+        return mc.thePlayer.getCurrentEquippedItem() != null
+                && mc.thePlayer.getCurrentEquippedItem().getItem() instanceof ItemSword;
+    }
+
+    private EntityLivingBase getClosestEnemy() {
+        List<Entity> entities = mc.theWorld.loadedEntityList;
+
+        return entities.stream()
+                .filter(e -> e instanceof EntityLivingBase
+                        && e != mc.thePlayer
+                        && !(e instanceof EntityPlayer && TeamUtil.isFriend((EntityPlayer) e))
+                        && mc.thePlayer.canEntityBeSeen(e))
+                .map(e -> (EntityLivingBase) e)
+                .min(Comparator.comparingDouble(e -> mc.thePlayer.getDistanceToEntity(e)))
+                .orElse(null);
+    }
+
+    private void startBlocking() {
+        if (!isBlocking) {
+            mc.thePlayer.sendQueue.addToSendQueue(
+                    new C0BPacketEntityAction(mc.thePlayer, C0BPacketEntityAction.Action.START_SNEAKING)
+            );
+            isBlocking = true;
+        }
+    }
+
+    private void stopBlocking() {
+        if (isBlocking) {
+            mc.thePlayer.sendQueue.addToSendQueue(
+                    new C0BPacketEntityAction(mc.thePlayer, C0BPacketEntityAction.Action.STOP_SNEAKING)
+            );
+            isBlocking = false;
+        }
+        blockTicks = 0;
+    }
+
+    @Override
+    public void onDisable() {
+        stopBlocking();
+    }
+
+    @Override
+    public String[] getSuffix() {
+        return isBlocking ? new String[]{"BLOCKING"} : new String[0];
+    }
+}
