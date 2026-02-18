@@ -282,9 +282,9 @@ public class Tracers extends Module {
                     break;
 
                 case 3: // Slinky — solid wide filled arrow (matches screenshot style)
-    final float halfWidth = 12.0F;   // total base width ~24 px — noticeably wider
-    final float height    = 10.0F;   // tip-to-base height — balanced but not too tall
-    final float tipInset  = 1.5F;    // slight inward curve at tip for softer point
+    final float halfWidth = 15.0F;   // total base ~30 px — very wide like Slinky
+    final float height    = 7.5F;    // short & chunky — not tall
+    final float tipInset  = 2.0F;    // inward curve for soft tip
 
     GL11.glEnable(GL11.GL_BLEND);
     GL11.glDisable(GL11.GL_TEXTURE_2D);
@@ -301,6 +301,33 @@ public class Tracers extends Module {
     GL11.glVertex2f(halfWidth, 0.0F);
     GL11.glEnd();
 
+    // Subtle highlight near tip (faint shine, common in Slinky-style)
+    float highlight = 0.18F;
+    GL11.glColor4f(
+        Math.min(1.0f, red   + highlight),
+        Math.min(1.0f, green + highlight),
+        Math.min(1.0f, blue  + highlight),
+        alpha * 0.7f
+    );
+    GL11.glBegin(GL11.GL_TRIANGLES);
+    GL11.glVertex2f(0.0F, -height + tipInset);         // raised tip
+    GL11.glVertex2f(-halfWidth * 0.6F, -1.0F);         // left highlight
+    GL11.glVertex2f( halfWidth * 0.6F, -1.0F);         // right highlight
+    GL11.glEnd();
+
+    // Thin dark outline (crisp contrast, Slinky signature)
+    float darken = 0.28F;  // darker for better pop
+    GL11.glColor4f(red * darken, green * darken, blue * darken, alpha);
+    GL11.glLineWidth(1.6F);
+    GL11.glBegin(GL11.GL_LINE_LOOP);
+    GL11.glVertex2f(0.0F, -height);
+    GL11.glVertex2f(-halfWidth, 0.0F);
+    GL11.glVertex2f(halfWidth, 0.0F);
+    GL11.glEnd();
+
+    GL11.glEnable(GL11.GL_TEXTURE_2D);
+    GL11.glDisable(GL11.GL_BLEND);
+    break;
     // Optional: very subtle inner gradient / highlight (Slinky sometimes has faint shine)
     // You can skip this if you want pure solid
     float highlight = 0.15F;
