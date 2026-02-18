@@ -126,3 +126,4 @@ public class Autoblock extends Module {
         stopBlocking();
         blockTicks = 0;
     }
+}
