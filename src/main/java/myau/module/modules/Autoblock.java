@@ -129,12 +129,10 @@ public class Autoblock extends Module {
         blockTicks = 0;
     }
 
-    @Override
     public void onDisable() {
         stopBlocking();
     }
 
-    @Override
     public String[] getSuffix() {
         return isBlocking ? new String[]{"BLOCKING"} : new String[0];
     }
