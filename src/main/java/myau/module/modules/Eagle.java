@@ -169,13 +169,14 @@ public class Eagle extends Module {
     /**
      * Safe wrapper around {@link Minecraft#theWorld} block lookup.
      */
-    private Block getBlockAt(int x, int y, int z) {
-        try {
-            return mc.theWorld.getBlockState(new BlockPos(x, y, z)).getBlock();
-        } catch (Exception e) {
-            return null;
-        }
+        private Block getBlockAt(int x, int y, int z) {
+    try {
+        return mc.theWorld.getChunkFromBlockCoords(new BlockPos(x, y, z))
+                .getBlock(new BlockPos(x, y, z));
+    } catch (Exception e) {
+        return null;
     }
+}
 
     // ─────────────────────────────────────────────────────────────────────────
     //  Event handlers
