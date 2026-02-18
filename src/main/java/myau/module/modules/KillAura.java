@@ -63,8 +63,6 @@ public class KillAura extends Module {
     return entity != null && entity != mc.thePlayer;
 }
 
-}
-
     // Removed ALL autoblock fields
 
     public final ModeProperty mode;
@@ -555,4 +553,5 @@ public class KillAura extends Module {
                 this.maxCPS.setValue(this.minCPS.getValue());
         }
     }
+}
 }
