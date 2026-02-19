@@ -4,6 +4,7 @@ import myau.config.Config;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.opengl.GL11;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,13 +17,19 @@ public class ConfigPanel {
     private List<String> configs = new ArrayList<>();
     private String activeConfig = Config.lastConfig;
 
+    // Context menu state
+    private String contextConfig = null;
+    private int contextX = 0;
+    private int contextY = 0;
+    private static final String[] CONTEXT_OPTIONS = {"Load", "Save", "Delete", "Open Folder"};
+
     public ConfigPanel() {
         refresh();
     }
 
     public void refresh() {
         configs.clear();
-        if (CONFIG_DIR.exists()) {
+        if (CONFIG_DIR.exists() && CONFIG_DIR.listFiles() != null) {
             for (File f : CONFIG_DIR.listFiles()) {
                 if (f.getName().endsWith(".json") && !f.getName().equals("gui.json")) {
                     configs.add(f.getName().replace(".json", ""));
@@ -41,49 +48,148 @@ public class ConfigPanel {
         int offsetY = y;
         for (String config : configs) {
             boolean selected = config.equals(activeConfig);
-            boolean hovered  = mouseX >= x && mouseX <= x + 100 &&
+            boolean hovered  = mouseX >= x && mouseX <= x + 106 &&
                                mouseY >= offsetY && mouseY <= offsetY + 18;
 
-            // Background
             int bg = selected ? 0xFF1A3A5C : (hovered ? 0xFF2A2A2A : 0xFF1A1A1A);
-            RoundedUtils.drawRoundedRect(x, offsetY, 100, 18, 4, bg);
+            RoundedUtils.drawRoundedRect(x, offsetY, 106, 18, 4, bg);
 
-            // Blue accent if selected
             if (selected) {
-                RoundedUtils.drawRoundedRect(x, offsetY, 3, 18, 2, 0xFF55AAFF);
+                drawSolidRect(x, offsetY, x + 3, offsetY + 18, 0xFF55AAFF);
             }
 
-            // Config name
             GL11.glColor4f(1f, 1f, 1f, 1f);
             int textColor = selected ? 0xFF55AAFF : (hovered ? 0xFFCCCCCC : 0xFFAAAAAA);
             mc.fontRendererObj.drawString(config, x + 8, offsetY + 5, textColor);
 
-            // Load button
-            if (hovered && !selected) {
-                GL11.glColor4f(1f, 1f, 1f, 1f);
-                mc.fontRendererObj.drawString("§aLoad", x + 72, offsetY + 5, 0xFF55FF55);
-            }
-
             offsetY += 20;
+        }
+
+        // Context menu drawn on top
+        if (contextConfig != null) {
+            int menuW = 90;
+            int menuH = CONTEXT_OPTIONS.length * 16 + 4;
+            RoundedUtils.drawRoundedRect(contextX, contextY, menuW, menuH, 4, 0xFF1A1A1A);
+            drawSolidRect(contextX, contextY, contextX + menuW, contextY + 1, 0xFF333333);
+            drawSolidRect(contextX, contextY + menuH - 1, contextX + menuW, contextY + menuH, 0xFF333333);
+
+            for (int i = 0; i < CONTEXT_OPTIONS.length; i++) {
+                String option = CONTEXT_OPTIONS[i];
+                int optY = contextY + 2 + i * 16;
+                boolean optHovered = mouseX >= contextX && mouseX <= contextX + menuW &&
+                                     mouseY >= optY && mouseY <= optY + 16;
+
+                if (optHovered) {
+                    RoundedUtils.drawRoundedRect(contextX + 2, optY, menuW - 4, 16, 3, 0xFF2A2A2A);
+                }
+
+                int optColor;
+                if (option.equals("Delete"))      optColor = 0xFFFF5555;
+                else if (option.equals("Save"))   optColor = 0xFF55FF55;
+                else                              optColor = optHovered ? 0xFFFFFFFF : 0xFFAAAAAA;
+
+                GL11.glColor4f(1f, 1f, 1f, 1f);
+                mc.fontRendererObj.drawString(option, contextX + 8, optY + 4, optColor);
+            }
         }
     }
 
     public void mouseClicked(int x, int y, int mouseX, int mouseY, int button) {
+
+        // Context menu open — handle it first
+        if (contextConfig != null) {
+            int menuW = 90;
+            for (int i = 0; i < CONTEXT_OPTIONS.length; i++) {
+                int optY = contextY + 2 + i * 16;
+                if (mouseX >= contextX && mouseX <= contextX + menuW &&
+                    mouseY >= optY && mouseY <= optY + 16) {
+                    handleContextOption(CONTEXT_OPTIONS[i], contextConfig);
+                    contextConfig = null;
+                    return;
+                }
+            }
+            contextConfig = null;
+            return;
+        }
+
         int offsetY = y;
         for (String config : configs) {
-            if (button == 0 &&
-                mouseX >= x && mouseX <= x + 100 &&
-                mouseY >= offsetY && mouseY <= offsetY + 18) {
+            boolean inRow = mouseX >= x && mouseX <= x + 106 &&
+                            mouseY >= offsetY && mouseY <= offsetY + 18;
 
-                activeConfig = config;
-                new Config(config, false).load();
+            if (inRow) {
+                if (button == 0) {
+                    activeConfig = config;
+                    new Config(config, false).load();
+                } else if (button == 1) {
+                    contextConfig = config;
+                    contextX = mouseX;
+                    contextY = mouseY;
+                }
                 return;
             }
             offsetY += 20;
         }
     }
 
+    private void handleContextOption(String option, String config) {
+        switch (option) {
+            case "Load":
+                activeConfig = config;
+                new Config(config, false).load();
+                break;
+
+            case "Save":
+                new Config(config, false).save();
+                break;
+
+            case "Delete":
+                File f = new File(CONFIG_DIR, config + ".json");
+                if (f.exists()) f.delete();
+                if (config.equals(activeConfig)) activeConfig = null;
+                refresh();
+                break;
+
+            case "Open Folder":
+                try {
+                    Desktop.getDesktop().open(CONFIG_DIR);
+                } catch (Exception e) {
+                    System.err.println("[ConfigPanel] Could not open folder: " + e.getMessage());
+                }
+                break;
+        }
+    }
+
+    public boolean isContextMenuOpen() {
+        return contextConfig != null;
+    }
+
+    public void closeContextMenu() {
+        contextConfig = null;
+    }
+
     public int getContentHeight() {
-        return Math.max(configs.size() * 20 + 8, 20);
+        if (configs.isEmpty()) return 20;
+        return configs.size() * 20 + 4;
+    }
+
+    private void drawSolidRect(int x1, int y1, int x2, int y2, int color) {
+        float a = (color >> 24 & 0xFF) / 255f;
+        float r = (color >> 16 & 0xFF) / 255f;
+        float g = (color >> 8  & 0xFF) / 255f;
+        float b = (color       & 0xFF) / 255f;
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(r, g, b, a);
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glVertex2f(x1, y1);
+        GL11.glVertex2f(x2, y1);
+        GL11.glVertex2f(x2, y2);
+        GL11.glVertex2f(x1, y2);
+        GL11.glEnd();
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 }
