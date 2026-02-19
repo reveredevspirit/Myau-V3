@@ -26,13 +26,10 @@ public class Rise6ClickGui extends GuiScreen {
     private int dragOffsetX = 0;
     private int dragOffsetY = 0;
 
-    // GUI position (loaded from GuiConfig)
     private int posX;
     private int posY;
 
-    // The draggable titlebar area (top strip of the panel)
-    private static final int PANEL_WIDTH  = 300;
-    private static final int PANEL_HEIGHT = 260;
+    private static final int PANEL_WIDTH    = 300;
     private static final int DRAG_BAR_HEIGHT = 16;
 
     public Rise6ClickGui(
@@ -50,10 +47,9 @@ public class Rise6ClickGui extends GuiScreen {
 
         selectedCategory = categories.get(0);
 
-        searchBar  = new SearchBar();
+        searchBar   = new SearchBar();
         modulePanel = new ModulePanel(selectedCategory);
 
-        // Load saved position
         GuiConfig.load();
         posX = GuiConfig.guiX;
         posY = GuiConfig.guiY;
@@ -71,30 +67,33 @@ public class Rise6ClickGui extends GuiScreen {
 
         // Smooth open animation
         openAnim += (1f - openAnim) * 0.15f;
-
         int guiAlpha = (int)(180 * openAnim);
 
-        // Fade overlay
+        // Dark screen overlay
         drawRect(0, 0, sr.getScaledWidth(), sr.getScaledHeight(), (guiAlpha << 24));
 
-        // Sidebar (fixed to left edge, independent of drag)
-        int yOffset = posY + 20;
+        // ----------------------------------------------------------------
+        // SIDEBAR BACKGROUND
+        // ----------------------------------------------------------------
+        int sidebarHeight = categories.size() * 28 + 20;
+        RoundedUtils.drawRoundedRect(5, posY, 115, sidebarHeight, 8, 0xDD0A0A0A);
+
+        // Sidebar categories
+        int yOffset = posY + 10;
         for (SidebarCategory cat : categories) {
             cat.render(10, yOffset, mouseX, mouseY, selectedCategory == cat);
             yOffset += 28;
         }
 
-        // Rounded background panel (draggable)
-        RoundedUtils.drawRoundedRect(posX - 10, posY, PANEL_WIDTH, PANEL_HEIGHT, 8, 0xCC0F0F0F);
+        // ----------------------------------------------------------------
+        // MAIN PANEL BACKGROUND (dynamic height)
+        // ----------------------------------------------------------------
+        int panelHeight = modulePanel.getContentHeight() + 60;
+        RoundedUtils.drawRoundedRect(posX - 10, posY, PANEL_WIDTH, panelHeight, 8, 0xDD0A0A0A);
 
-        // Drag handle bar at top of panel
-        RoundedUtils.drawRoundedRect(posX - 10, posY, PANEL_WIDTH, DRAG_BAR_HEIGHT, 8, 0xCC1A1A1A);
-        mc.fontRendererObj.drawString(
-                "§7✦ Myau",
-                posX,
-                posY + 4,
-                0xFFAAAAAA
-        );
+        // Drag handle bar
+        RoundedUtils.drawRoundedRect(posX - 10, posY, PANEL_WIDTH, DRAG_BAR_HEIGHT, 8, 0xDD1A1A1A);
+        mc.fontRendererObj.drawString("§7✦ Myau", posX, posY + 4, 0xFFAAAAAA);
 
         // Search bar
         searchBar.render(posX, posY + 20, mouseX, mouseY);
@@ -108,7 +107,6 @@ public class Rise6ClickGui extends GuiScreen {
     @Override
     public void onGuiClosed() {
         super.onGuiClosed();
-        // Save position when GUI is closed
         GuiConfig.guiX = posX;
         GuiConfig.guiY = posY;
         GuiConfig.save();
@@ -117,7 +115,7 @@ public class Rise6ClickGui extends GuiScreen {
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int button) throws IOException {
 
-        // Check if clicking the drag bar
+        // Drag bar click
         if (button == 0 &&
             mouseX >= posX - 10 && mouseX <= posX - 10 + PANEL_WIDTH &&
             mouseY >= posY && mouseY <= posY + DRAG_BAR_HEIGHT) {
@@ -129,9 +127,9 @@ public class Rise6ClickGui extends GuiScreen {
         }
 
         // Sidebar category clicks
-        int yOffset = posY + 20;
+        int yOffset = posY + 10;
         for (SidebarCategory cat : categories) {
-            if (mouseX >= 10 && mouseX <= 110 &&
+            if (mouseX >= 10 && mouseX <= 120 &&
                 mouseY >= yOffset && mouseY <= yOffset + 22) {
                 selectedCategory = cat;
                 modulePanel.setCategory(cat);
@@ -148,10 +146,8 @@ public class Rise6ClickGui extends GuiScreen {
     public void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
         if (dragging) {
             ScaledResolution sr = new ScaledResolution(mc);
-
-            // Move panel, clamp to screen edges
-            posX = Math.max(10, Math.min(sr.getScaledWidth()  - PANEL_WIDTH  + 10, mouseX - dragOffsetX));
-            posY = Math.max(0,  Math.min(sr.getScaledHeight() - PANEL_HEIGHT,      mouseY - dragOffsetY));
+            posX = Math.max(10, Math.min(sr.getScaledWidth()  - PANEL_WIDTH + 10, mouseX - dragOffsetX));
+            posY = Math.max(0,  Math.min(sr.getScaledHeight() - 100,              mouseY - dragOffsetY));
         } else {
             modulePanel.mouseClickMove(mouseX);
         }
