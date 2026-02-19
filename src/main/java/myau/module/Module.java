@@ -4,6 +4,9 @@ import myau.Myau;
 import myau.module.modules.HUD;
 import myau.util.KeyBindUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class Module {
     protected final String name;
     protected final boolean defaultEnabled;
@@ -12,6 +15,9 @@ public abstract class Module {
     protected boolean enabled;
     protected int key;
     protected boolean hidden;
+
+    // Settings
+    protected final List<Setting> settings = new ArrayList<>();
 
     public Module(String name, boolean enabled) {
         this(name, enabled, false);
@@ -22,6 +28,16 @@ public abstract class Module {
         this.enabled = this.defaultEnabled = enabled;
         this.key = this.defaultKey = 0;
         this.hidden = this.defaultHidden = hidden;
+    }
+
+    // Register a setting and return it (for inline field declaration)
+    protected <T extends Setting> T register(T setting) {
+        settings.add(setting);
+        return setting;
+    }
+
+    public List<Setting> getSettings() {
+        return settings;
     }
 
     public String getName() {
@@ -63,18 +79,14 @@ public abstract class Module {
             if (((HUD) Myau.moduleManager.modules.get(HUD.class)).toggleSound.getValue()) {
                 Myau.moduleManager.playSound();
             }
-
-            // Add a transient in-game notification for toggles
             try {
                 if (Myau.notificationManager != null) {
                     String action = this.enabled ? "was toggled successfully" : "was untoggled successfully";
-                    // green for enabled, red for disabled
                     int color = this.enabled ? 0x00FF00 : 0xFF0000;
                     Myau.notificationManager.add(this.getName() + " " + action, color);
                 }
             } catch (Exception ignored) {
             }
-
             return true;
         } else {
             return false;
