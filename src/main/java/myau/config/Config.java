@@ -4,6 +4,10 @@ import com.google.gson.*;
 import myau.Myau;
 import myau.mixin.IAccessorMinecraft;
 import myau.module.Module;
+import myau.module.BooleanSetting;
+import myau.module.KeybindSetting;
+import myau.module.Setting;
+import myau.module.SliderSetting;
 import myau.util.ChatUtil;
 import myau.property.Property;
 import net.minecraft.client.Minecraft;
@@ -38,7 +42,6 @@ public class Config {
 
     public void load() {
         try {
-
             if (!file.exists()) {
                 ChatUtil.sendFormatted(String.format("%sConfig file not found (&c&o%s&r). Creating default config...&r", Myau.clientName, file.getName()));
                 save();
@@ -53,10 +56,11 @@ public class Config {
 
             JsonObject jsonObject = parsed.getAsJsonObject();
             for (Module module : Myau.moduleManager.modules.values()) {
-                JsonElement moduleObj = jsonObject.get(module.getName());
-                if (moduleObj != null && moduleObj.isJsonObject()) {
-                    JsonObject object = moduleObj.getAsJsonObject();
+                JsonElement moduleEl = jsonObject.get(module.getName());
+                if (moduleEl != null && moduleEl.isJsonObject()) {
+                    JsonObject object = moduleEl.getAsJsonObject();
 
+                    // Existing property system
                     ArrayList<Property<?>> list = Myau.propertyManager.properties.get(module.getClass());
                     if (list != null) {
                         for (Property<?> property : list) {
@@ -64,8 +68,34 @@ public class Config {
                                 try {
                                     property.read(object);
                                 } catch (Exception e) {
-                                    ((IAccessorMinecraft) mc).getLogger().warn(String.format("Failed to load property %s for module %s", property.getName(), module.getName()));
+                                    ((IAccessorMinecraft) mc).getLogger().warn(
+                                        String.format("Failed to load property %s for module %s",
+                                            property.getName(), module.getName()));
                                 }
+                            }
+                        }
+                    }
+
+                    // New settings system
+                    if (object.has("settings")) {
+                        JsonObject settingsObj = object.getAsJsonObject("settings");
+                        for (Setting setting : module.getSettings()) {
+                            if (!settingsObj.has(setting.getName())) continue;
+                            try {
+                                if (setting instanceof SliderSetting) {
+                                    ((SliderSetting) setting).setValue(
+                                        settingsObj.get(setting.getName()).getAsDouble());
+                                } else if (setting instanceof BooleanSetting) {
+                                    ((BooleanSetting) setting).setValue(
+                                        settingsObj.get(setting.getName()).getAsBoolean());
+                                } else if (setting instanceof KeybindSetting) {
+                                    ((KeybindSetting) setting).setKeyCode(
+                                        settingsObj.get(setting.getName()).getAsInt());
+                                }
+                            } catch (Exception e) {
+                                ((IAccessorMinecraft) mc).getLogger().warn(
+                                    String.format("Failed to load setting %s for module %s",
+                                        setting.getName(), module.getName()));
                             }
                         }
                     }
@@ -117,16 +147,44 @@ public class Config {
                 moduleObject.addProperty("key", module.getKey());
                 moduleObject.addProperty("hidden", module.isHidden());
 
+                // Existing property system
                 ArrayList<Property<?>> list = Myau.propertyManager.properties.get(module.getClass());
                 if (list != null) {
                     for (Property<?> property : list) {
                         try {
                             property.write(moduleObject);
                         } catch (Exception e) {
-                            ((IAccessorMinecraft) mc).getLogger().warn(String.format("Failed to save property %s for module %s", property.getName(), module.getName()));
+                            ((IAccessorMinecraft) mc).getLogger().warn(
+                                String.format("Failed to save property %s for module %s",
+                                    property.getName(), module.getName()));
                         }
                     }
                 }
+
+                // New settings system
+                if (!module.getSettings().isEmpty()) {
+                    JsonObject settingsObj = new JsonObject();
+                    for (Setting setting : module.getSettings()) {
+                        try {
+                            if (setting instanceof SliderSetting) {
+                                settingsObj.addProperty(setting.getName(),
+                                    ((SliderSetting) setting).getValue());
+                            } else if (setting instanceof BooleanSetting) {
+                                settingsObj.addProperty(setting.getName(),
+                                    ((BooleanSetting) setting).getValue());
+                            } else if (setting instanceof KeybindSetting) {
+                                settingsObj.addProperty(setting.getName(),
+                                    ((KeybindSetting) setting).getKeyCode());
+                            }
+                        } catch (Exception e) {
+                            ((IAccessorMinecraft) mc).getLogger().warn(
+                                String.format("Failed to save setting %s for module %s",
+                                    setting.getName(), module.getName()));
+                        }
+                    }
+                    moduleObject.add("settings", settingsObj);
+                }
+
                 object.add(module.getName(), moduleObject);
             }
 
