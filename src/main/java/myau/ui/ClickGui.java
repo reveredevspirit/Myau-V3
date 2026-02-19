@@ -22,10 +22,17 @@ import java.util.List;
 
 public class ClickGui extends GuiScreen {
 
+    public static List<Module> combatModules;
+    public static List<Module> movementModules;
+    public static List<Module> playerModules;
+    public static List<Module> renderModules;
+    public static List<Module> miscModules;
+
     private static ClickGui instance;
     private final File configFile = new File("./config/Myau/", "clickgui.txt");
     private final ArrayList<CategoryComponent> categoryList;
 
+    
     // Rise‑style background fade
     private float fade = 0f;
 
@@ -33,7 +40,7 @@ public class ClickGui extends GuiScreen {
         instance = this;
 
         // === Your module registration stays exactly the same ===
-        List<Module> combatModules = new ArrayList<>();
+        combatModules = new ArrayList<>();
         combatModules.add(Myau.moduleManager.getModule(AimAssist.class));
         combatModules.add(Myau.moduleManager.getModule(AutoClicker.class));
         combatModules.add(Myau.moduleManager.getModule(KillAura.class));
@@ -55,7 +62,7 @@ public class ClickGui extends GuiScreen {
         combatModules.add(Myau.moduleManager.getModule(BlockHit.class));
         combatModules.add(Myau.moduleManager.getModule(Autoblock.class));
 
-        List<Module> movementModules = new ArrayList<>();
+        movementModules = new ArrayList<>();
         movementModules.add(Myau.moduleManager.getModule(AntiAFK.class));
         movementModules.add(Myau.moduleManager.getModule(Fly.class));
         movementModules.add(Myau.moduleManager.getModule(FastBow.class));
@@ -73,7 +80,7 @@ public class ClickGui extends GuiScreen {
         movementModules.add(Myau.moduleManager.getModule(NoJumpDelay.class));
         movementModules.add(Myau.moduleManager.getModule(AntiVoid.class));
 
-        List<Module> renderModules = new ArrayList<>();
+        renderModules = new ArrayList<>();
         renderModules.add(Myau.moduleManager.getModule(ESP.class));
         renderModules.add(Myau.moduleManager.getModule(Chams.class));
         renderModules.add(Myau.moduleManager.getModule(FullBright.class));
@@ -94,7 +101,7 @@ public class ClickGui extends GuiScreen {
         renderModules.add(Myau.moduleManager.getModule(FPScounter.class));
         renderModules.add(Myau.moduleManager.getModule(Freelook.class));
 
-        List<Module> playerModules = new ArrayList<>();
+        playerModules = new ArrayList<>();
         playerModules.add(Myau.moduleManager.getModule(AutoHeal.class));
         playerModules.add(Myau.moduleManager.getModule(FakeLag.class));
         playerModules.add(Myau.moduleManager.getModule(AutoTool.class));
@@ -111,7 +118,7 @@ public class ClickGui extends GuiScreen {
         playerModules.add(Myau.moduleManager.getModule(AntiDebuff.class));
         playerModules.add(Myau.moduleManager.getModule(FlagDetector.class));
 
-        List<Module> miscModules = new ArrayList<>();
+        miscModules = new ArrayList<>();
         miscModules.add(Myau.moduleManager.getModule(Spammer.class));
         miscModules.add(Myau.moduleManager.getModule(BedNuker.class));
         miscModules.add(Myau.moduleManager.getModule(BedTracker.class));
