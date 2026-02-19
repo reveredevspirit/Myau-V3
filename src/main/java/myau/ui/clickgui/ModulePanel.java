@@ -79,46 +79,47 @@ public class ModulePanel {
 
             offsetY += height + 1;
 
-            // Settings
+            // ----------------------------------------------------------------
+            // SETTINGS
+            // ----------------------------------------------------------------
             if (expandedModule == module) {
                 for (Setting setting : module.getSettings()) {
 
                     if (setting instanceof SliderSetting) {
                         SliderSetting slider = (SliderSetting) setting;
 
-                        int rowH = 22;
+                        int rowH = 28;
                         RoundedUtils.drawRoundedRect(x + 6, offsetY, width - 6, rowH, 3, 0xFF202020);
 
-                        // Name
-                        mc.fontRendererObj.drawString(setting.getName(), x + 10, offsetY + 3, 0xFF999999);
+                        // Setting name
+                        mc.fontRendererObj.drawString(setting.getName(), x + 10, offsetY + 4, 0xFF999999);
 
                         // Value
                         String valStr = formatDouble(slider.getValue());
                         mc.fontRendererObj.drawString(valStr,
                                 x + width - mc.fontRendererObj.getStringWidth(valStr) - 8,
-                                offsetY + 3, 0xFF55AAFF);
+                                offsetY + 4, 0xFF55AAFF);
 
-                        // Slider bar
+                        // Grey track
                         int barX = x + 10;
-                        int barY = offsetY + 14;
+                        int barY = offsetY + 17;
                         int barW = width - 20;
-                        int barH = 3;
 
-                        RoundedUtils.drawRoundedRect(barX, barY, barW, barH, 1, 0xFF444444);
+                        RoundedUtils.drawRoundedRect(barX, barY, barW, 4, 2, 0xFF444444);
 
-                        int fillW = Math.max(1, (int)(barW * slider.getPercent()));
-                        RoundedUtils.drawRoundedRect(barX, barY, fillW, barH, 1, 0xFF55AAFF);
+                        // Blue fill
+                        int fillW = Math.max(4, (int)(barW * slider.getPercent()));
+                        RoundedUtils.drawRoundedRect(barX, barY, fillW, 4, 2, 0xFF55AAFF);
 
-                        // Knob
-                        int knobX = barX + fillW - 3;
-                        RoundedUtils.drawRoundedRect(knobX, barY - 2, 6, 7, 3, 0xFFFFFFFF);
+                        // White knob
+                        RoundedUtils.drawRoundedRect(barX + fillW - 4, barY - 3, 8, 10, 4, 0xFFFFFFFF);
 
                         if (draggingSlider == slider) {
                             sliderRenderX = barX;
                             sliderRenderWidth = barW;
                         }
 
-                        offsetY += rowH + 1;
+                        offsetY += rowH + 2;
 
                     } else if (setting instanceof KeybindSetting) {
                         KeybindSetting kb = (KeybindSetting) setting;
@@ -179,12 +180,12 @@ public class ModulePanel {
                         SliderSetting slider = (SliderSetting) setting;
 
                         int barX = x + 10;
-                        int barY = offsetY + 14;
+                        int barY = offsetY + 17;
                         int barW = width - 20;
 
                         if (button == 0 &&
                             mouseX >= barX && mouseX <= barX + barW &&
-                            mouseY >= barY - 2 && mouseY <= barY + 9) {
+                            mouseY >= barY - 3 && mouseY <= barY + 10) {
 
                             draggingSlider = slider;
                             sliderRenderX = barX;
@@ -192,7 +193,7 @@ public class ModulePanel {
                             updateSlider(mouseX);
                         }
 
-                        offsetY += 23;
+                        offsetY += 30;
 
                     } else if (setting instanceof KeybindSetting) {
                         KeybindSetting kb = (KeybindSetting) setting;
@@ -241,6 +242,24 @@ public class ModulePanel {
     }
 
     // ----------------------------------------------------------------
+    // CONTENT HEIGHT (for dynamic background sizing)
+    // ----------------------------------------------------------------
+    public int getContentHeight() {
+        int h = 0;
+        for (Module module : category.getModules()) {
+            h += 17;
+            if (expandedModule == module) {
+                for (Setting setting : module.getSettings()) {
+                    if (setting instanceof SliderSetting)        h += 30;
+                    else if (setting instanceof KeybindSetting)  h += 17;
+                }
+                h += 2;
+            }
+        }
+        return h;
+    }
+
+    // ----------------------------------------------------------------
     // HELPERS
     // ----------------------------------------------------------------
     private void updateSlider(int mouseX) {
@@ -260,20 +279,4 @@ public class ModulePanel {
         int a2 = (col2 >> 24) & 0xFF, r2 = (col2 >> 16) & 0xFF, g2 = (col2 >> 8) & 0xFF, b2 = col2 & 0xFF;
         return ((int)(a1+(a2-a1)*t) << 24) | ((int)(r1+(r2-r1)*t) << 16) | ((int)(g1+(g2-g1)*t) << 8) | (int)(b1+(b2-b1)*t);
     }
-
-    public int getContentHeight() {
-    int h = 0;
-    for (Module module : category.getModules()) {
-        h += 17; // row height + gap
-
-        if (expandedModule == module) {
-            for (Setting setting : module.getSettings()) {
-                if (setting instanceof SliderSetting)   h += 23;
-                else if (setting instanceof KeybindSetting) h += 17;
-            }
-            h += 2;
-        }
-    }
-    return h;
-}
 }
