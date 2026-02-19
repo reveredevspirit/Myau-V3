@@ -1,96 +1,273 @@
-@Override
-public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+package myau.ui.clickgui;
 
-    ScaledResolution sr = new ScaledResolution(mc);
+import myau.config.GuiConfig;
+import myau.module.Module;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.client.gui.ScaledResolution;
+import org.lwjgl.opengl.GL11;
 
-    openAnim += (1f - openAnim) * 0.15f;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-    // Calculate height ONCE
-    int panelHeight = getPanelHeight();
+public class Rise6ClickGui extends GuiScreen {
 
-    // ----------------------------------------------------------------
-    // BACKGROUND ONLY BEHIND THE GUI — not full screen
-    // ----------------------------------------------------------------
-    drawRect(
-        posX - 4,
-        posY - 4,
-        posX + TOTAL_WIDTH + 4,
-        posY + panelHeight + 4,
-        (int)(0xAA000000)
-    );
+    private final List<SidebarCategory> categories = new ArrayList<>();
+    private SidebarCategory selectedCategory;
 
-    // ----------------------------------------------------------------
-    // OUTER BACKGROUND
-    // ----------------------------------------------------------------
-    RoundedUtils.drawRoundedRect(posX, posY, TOTAL_WIDTH, panelHeight, 10, 0xF0080808);
+    private float openAnim = 0f;
 
-    // ----------------------------------------------------------------
-    // SIDEBAR — same width/height as outer so edges align perfectly
-    // NO divider line — the color difference is enough
-    // ----------------------------------------------------------------
-    RoundedUtils.drawRoundedRect(posX, posY, SIDEBAR_WIDTH, panelHeight, 10, 0xF0111111);
+    private SearchBar searchBar;
+    private ModulePanel modulePanel;
+    private ConfigPanel configPanel;
 
-    // Title
-    GL11.glColor4f(1f, 1f, 1f, 1f);
-    mc.fontRendererObj.drawString("§b§lMyau", posX + 10, posY + 8, 0xFFFFFFFF);
+    private boolean showConfigs = false;
 
     // ----------------------------------------------------------------
-    // CATEGORIES
+    // DRAG STATE
     // ----------------------------------------------------------------
-    int yOffset = posY + 28;
-    for (SidebarCategory cat : categories) {
-        boolean selected = selectedCategory == cat;
-        boolean hovered  = mouseX >= posX + 6 && mouseX <= posX + SIDEBAR_WIDTH - 6 &&
-                           mouseY >= yOffset - 2 && mouseY <= yOffset + 18;
+    private boolean dragging = false;
+    private int dragOffsetX = 0;
+    private int dragOffsetY = 0;
 
-        if (selected) {
-            RoundedUtils.drawRoundedRect(posX + 6, yOffset - 2, SIDEBAR_WIDTH - 12, 20, 4, 0xFF1A3A5C);
-            drawRect(posX + 4, yOffset, posX + 7, yOffset + 14, 0xFF55AAFF);
-        } else if (hovered) {
-            RoundedUtils.drawRoundedRect(posX + 6, yOffset - 2, SIDEBAR_WIDTH - 12, 20, 4, 0xFF1A1A1A);
+    private int posX;
+    private int posY;
+
+    private static final int SIDEBAR_WIDTH   = 120;
+    private static final int PANEL_WIDTH     = 220;
+    private static final int DRAG_BAR_HEIGHT = 16;
+    private static final int TOTAL_WIDTH     = SIDEBAR_WIDTH + PANEL_WIDTH;
+
+    public Rise6ClickGui(
+            List<Module> combatModules,
+            List<Module> movementModules,
+            List<Module> playerModules,
+            List<Module> renderModules,
+            List<Module> miscModules
+    ) {
+        categories.add(new SidebarCategory("Combat",   combatModules));
+        categories.add(new SidebarCategory("Movement", movementModules));
+        categories.add(new SidebarCategory("Player",   playerModules));
+        categories.add(new SidebarCategory("Render",   renderModules));
+        categories.add(new SidebarCategory("Misc",     miscModules));
+
+        selectedCategory = categories.get(0);
+
+        searchBar   = new SearchBar();
+        modulePanel = new ModulePanel(selectedCategory);
+        configPanel = new ConfigPanel();
+
+        GuiConfig.load();
+        posX = GuiConfig.guiX;
+        posY = GuiConfig.guiY;
+    }
+
+    @Override
+    public void initGui() {
+        super.initGui();
+    }
+
+    // ----------------------------------------------------------------
+    // HEIGHT HELPERS — calculated once, used everywhere
+    // ----------------------------------------------------------------
+    private int getCategoryHeight() { return categories.size() * 24 + 28; }
+    private int getConfigBtnY()     { return posY + getCategoryHeight() + 8; }
+    private int getConfigPanelH()   { return showConfigs ? configPanel.getContentHeight() : 0; }
+    private int getSidebarHeight()  { return getCategoryHeight() + 8 + 16 + getConfigPanelH() + 8; }
+    private int getPanelHeight()    { return Math.max(modulePanel.getContentHeight() + 50, getSidebarHeight()); }
+
+    @Override
+    public void drawScreen(int mouseX, int mouseY, float partialTicks) {
+
+        openAnim += (1f - openAnim) * 0.15f;
+
+        // Calculate height ONCE before drawing anything
+        int panelHeight = getPanelHeight();
+
+        // ----------------------------------------------------------------
+        // DARK BACKGROUND ONLY BEHIND THE GUI
+        // ----------------------------------------------------------------
+        drawRect(
+                posX - 4,
+                posY - 4,
+                posX + TOTAL_WIDTH + 4,
+                posY + panelHeight + 4,
+                0xAA000000
+        );
+
+        // ----------------------------------------------------------------
+        // OUTER BACKGROUND
+        // ----------------------------------------------------------------
+        RoundedUtils.drawRoundedRect(posX, posY, TOTAL_WIDTH, panelHeight, 10, 0xF0080808);
+
+        // ----------------------------------------------------------------
+        // SIDEBAR BACKGROUND
+        // ----------------------------------------------------------------
+        RoundedUtils.drawRoundedRect(posX, posY, SIDEBAR_WIDTH, panelHeight, 10, 0xF0111111);
+
+        // Title
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        mc.fontRendererObj.drawString("§b§lMyau", posX + 10, posY + 8, 0xFFFFFFFF);
+
+        // ----------------------------------------------------------------
+        // CATEGORIES
+        // ----------------------------------------------------------------
+        int yOffset = posY + 28;
+        for (SidebarCategory cat : categories) {
+            boolean selected = selectedCategory == cat;
+            boolean hovered  = mouseX >= posX + 6 && mouseX <= posX + SIDEBAR_WIDTH - 6 &&
+                               mouseY >= yOffset - 2 && mouseY <= yOffset + 18;
+
+            if (selected) {
+                RoundedUtils.drawRoundedRect(posX + 6, yOffset - 2, SIDEBAR_WIDTH - 12, 20, 4, 0xFF1A3A5C);
+                drawRect(posX + 4, yOffset, posX + 7, yOffset + 14, 0xFF55AAFF);
+            } else if (hovered) {
+                RoundedUtils.drawRoundedRect(posX + 6, yOffset - 2, SIDEBAR_WIDTH - 12, 20, 4, 0xFF1A1A1A);
+            }
+
+            int textColor = selected ? 0xFF55AAFF : (hovered ? 0xFFCCCCCC : 0xFF888888);
+            GL11.glColor4f(1f, 1f, 1f, 1f);
+            mc.fontRendererObj.drawString(cat.getName(), posX + 14, yOffset + 3, textColor);
+
+            yOffset += 24;
         }
 
-        int textColor = selected ? 0xFF55AAFF : (hovered ? 0xFFCCCCCC : 0xFF888888);
+        // ----------------------------------------------------------------
+        // CONFIGS BUTTON
+        // ----------------------------------------------------------------
+        int configBtnY = getConfigBtnY();
+        boolean configHovered = mouseX >= posX + 6 && mouseX <= posX + SIDEBAR_WIDTH - 6 &&
+                                mouseY >= configBtnY && mouseY <= configBtnY + 16;
+
+        RoundedUtils.drawRoundedRect(posX + 6, configBtnY, SIDEBAR_WIDTH - 12, 16, 4,
+                showConfigs ? 0xFF1A3A5C : (configHovered ? 0xFF1A1A1A : 0xFF161616));
+
+        if (showConfigs) {
+            drawRect(posX + 4, configBtnY + 2, posX + 7, configBtnY + 14, 0xFF55AAFF);
+        }
+
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        mc.fontRendererObj.drawString(cat.getName(), posX + 14, yOffset + 3, textColor);
+        mc.fontRendererObj.drawString(
+                showConfigs ? "§bConfigs" : "§7Configs",
+                posX + 14, configBtnY + 4,
+                showConfigs ? 0xFF55AAFF : (configHovered ? 0xFFCCCCCC : 0xFF888888));
 
-        yOffset += 24;
+        if (showConfigs) {
+            configPanel.render(posX + 6, configBtnY + 20, mouseX, mouseY);
+        }
+
+        // ----------------------------------------------------------------
+        // MAIN PANEL
+        // ----------------------------------------------------------------
+        int panelX = posX + SIDEBAR_WIDTH + 8;
+
+        searchBar.render(panelX, posY + 10, mouseX, mouseY);
+
+        drawRect(panelX, posY + 30, posX + TOTAL_WIDTH - 8, posY + 31, 0xFF222222);
+
+        modulePanel.render(panelX, posY + 38, mouseX, mouseY, searchBar.getText());
+
+        super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    // ----------------------------------------------------------------
-    // CONFIGS BUTTON
-    // ----------------------------------------------------------------
-    int configBtnY = getConfigBtnY();
-    boolean configHovered = mouseX >= posX + 6 && mouseX <= posX + SIDEBAR_WIDTH - 6 &&
-                            mouseY >= configBtnY && mouseY <= configBtnY + 16;
-
-    RoundedUtils.drawRoundedRect(posX + 6, configBtnY, SIDEBAR_WIDTH - 12, 16, 4,
-            showConfigs ? 0xFF1A3A5C : (configHovered ? 0xFF1A1A1A : 0xFF161616));
-
-    if (showConfigs) {
-        drawRect(posX + 4, configBtnY + 2, posX + 7, configBtnY + 14, 0xFF55AAFF);
+    @Override
+    public void onGuiClosed() {
+        super.onGuiClosed();
+        GuiConfig.guiX = posX;
+        GuiConfig.guiY = posY;
+        GuiConfig.save();
     }
 
-    GL11.glColor4f(1f, 1f, 1f, 1f);
-    mc.fontRendererObj.drawString(
-            showConfigs ? "§bConfigs" : "§7Configs",
-            posX + 14, configBtnY + 4,
-            showConfigs ? 0xFF55AAFF : (configHovered ? 0xFFCCCCCC : 0xFF888888));
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int button) throws IOException {
 
-    if (showConfigs) {
-        configPanel.render(posX + 6, configBtnY + 20, mouseX, mouseY);
+        // If context menu open let it handle first
+        if (configPanel.isContextMenuOpen()) {
+            configPanel.mouseClicked(posX + 6, getConfigBtnY() + 20, mouseX, mouseY, button);
+            return;
+        }
+
+        // Drag bar
+        if (button == 0 &&
+            mouseX >= posX && mouseX <= posX + TOTAL_WIDTH &&
+            mouseY >= posY && mouseY <= posY + DRAG_BAR_HEIGHT) {
+            dragging = true;
+            dragOffsetX = mouseX - posX;
+            dragOffsetY = mouseY - posY;
+            return;
+        }
+
+        // Category clicks
+        int yOffset = posY + 28;
+        for (SidebarCategory cat : categories) {
+            if (mouseX >= posX + 6 && mouseX <= posX + SIDEBAR_WIDTH - 6 &&
+                mouseY >= yOffset - 2 && mouseY <= yOffset + 18) {
+                selectedCategory = cat;
+                modulePanel.setCategory(cat);
+                return;
+            }
+            yOffset += 24;
+        }
+
+        // Configs button
+        int configBtnY = getConfigBtnY();
+        if (button == 0 &&
+            mouseX >= posX + 6 && mouseX <= posX + SIDEBAR_WIDTH - 6 &&
+            mouseY >= configBtnY && mouseY <= configBtnY + 16) {
+            showConfigs = !showConfigs;
+            if (showConfigs) configPanel.refresh();
+            return;
+        }
+
+        // Config panel clicks
+        if (showConfigs) {
+            configPanel.mouseClicked(posX + 6, configBtnY + 20, mouseX, mouseY, button);
+        }
+
+        // Search + module panel
+        int panelX = posX + SIDEBAR_WIDTH + 8;
+        searchBar.mouseClicked(mouseX, mouseY, button);
+        modulePanel.mouseClicked(panelX, posY + 38, mouseX, mouseY, button);
     }
 
-    // ----------------------------------------------------------------
-    // MAIN PANEL
-    // ----------------------------------------------------------------
-    int panelX = posX + SIDEBAR_WIDTH + 8;
+    @Override
+    public void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+        if (dragging) {
+            ScaledResolution sr = new ScaledResolution(mc);
+            posX = Math.max(0, Math.min(sr.getScaledWidth()  - TOTAL_WIDTH, mouseX - dragOffsetX));
+            posY = Math.max(0, Math.min(sr.getScaledHeight() - 100,         mouseY - dragOffsetY));
+        } else {
+            modulePanel.mouseClickMove(mouseX);
+        }
+    }
 
-    searchBar.render(panelX, posY + 10, mouseX, mouseY);
+    @Override
+    protected void mouseReleased(int mouseX, int mouseY, int state) {
+        dragging = false;
+        modulePanel.mouseReleased();
+    }
 
-    drawRect(panelX, posY + 30, posX + TOTAL_WIDTH - 8, posY + 31, 0xFF222222);
+    @Override
+    public void handleMouseInput() throws IOException {
+        super.handleMouseInput();
+        int delta = org.lwjgl.input.Mouse.getEventDWheel();
+        if (delta != 0) {
+            modulePanel.handleScroll(delta);
+        }
+    }
 
-    modulePanel.render(panelX, posY + 38, mouseX, mouseY, searchBar.getText());
+    @Override
+    protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        if (keyCode == 1) {
+            mc.displayGuiScreen(null);
+            return;
+        }
+        if (searchBar.keyTyped(typedChar, keyCode)) return;
+        modulePanel.keyTyped(typedChar, keyCode);
+    }
 
-    super.drawScreen(mouseX, mouseY, partialTicks);
+    @Override
+    public boolean doesGuiPauseGame() {
+        return false;
+    }
 }
