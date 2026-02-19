@@ -4,6 +4,7 @@ import myau.config.GuiConfig;
 import myau.module.Module;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.ScaledResolution;
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import java.io.IOException;
@@ -77,18 +78,17 @@ public class Rise6ClickGui extends GuiScreen {
 
         int panelHeight = getPanelHeight();
 
-        // Tell module panel how tall the visible area is
         modulePanel.setVisibleHeight(panelHeight - 50);
 
-        // Rounded background behind GUI at 80% opacity
-            RoundedUtils.drawRoundedRect(
-        posX - 8,
-        posY - 8,
-        TOTAL_WIDTH + 16,
-        panelHeight + 16,
-        12,
-        0xCC000000
-);
+        // Rounded dark background only behind GUI
+        RoundedUtils.drawRoundedRect(
+                posX - 8,
+                posY - 8,
+                TOTAL_WIDTH + 16,
+                panelHeight + 16,
+                12,
+                0xCC000000
+        );
 
         // Outer background
         RoundedUtils.drawRoundedRect(posX, posY, TOTAL_WIDTH, panelHeight, 10, 0xF0080808);
@@ -162,6 +162,15 @@ public class Rise6ClickGui extends GuiScreen {
     }
 
     @Override
+    public void handleMouseInput() throws IOException {
+        super.handleMouseInput();
+        int delta = Mouse.getEventDWheel();
+        if (delta != 0) {
+            modulePanel.handleScroll(delta);
+        }
+    }
+
+    @Override
     protected void mouseClicked(int mouseX, int mouseY, int button) throws IOException {
 
         if (configPanel.isContextMenuOpen()) {
@@ -225,15 +234,6 @@ public class Rise6ClickGui extends GuiScreen {
     protected void mouseReleased(int mouseX, int mouseY, int state) {
         dragging = false;
         modulePanel.mouseReleased();
-    }
-
-    @Override
-    public void handleMouseInput() throws IOException {
-        super.handleMouseInput();
-        int delta = org.lwjgl.input.Mouse.getEventDWheel();
-        if (delta != 0) {
-            modulePanel.handleScroll(delta);
-        }
     }
 
     @Override
