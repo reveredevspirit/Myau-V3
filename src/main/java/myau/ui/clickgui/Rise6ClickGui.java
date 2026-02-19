@@ -31,7 +31,7 @@ public class Rise6ClickGui extends GuiScreen {
     private int posY;
 
     private static final int SIDEBAR_WIDTH   = 120;
-    private static final int PANEL_WIDTH     = 220;
+    private static final int PANEL_WIDTH     = 260;
     private static final int DRAG_BAR_HEIGHT = 16;
     private static final int TOTAL_WIDTH     = SIDEBAR_WIDTH + PANEL_WIDTH;
 
@@ -80,14 +80,15 @@ public class Rise6ClickGui extends GuiScreen {
         // Tell module panel how tall the visible area is
         modulePanel.setVisibleHeight(panelHeight - 50);
 
-        // Dark background only behind GUI
-        drawRect(
-                posX - 4,
-                posY - 4,
-                posX + TOTAL_WIDTH + 4,
-                posY + panelHeight + 4,
-                0xAA000000
-        );
+        // Rounded background behind GUI at 80% opacity
+            RoundedUtils.drawRoundedRect(
+        posX - 8,
+        posY - 8,
+        TOTAL_WIDTH + 16,
+        panelHeight + 16,
+        12,
+        0xCC000000
+);
 
         // Outer background
         RoundedUtils.drawRoundedRect(posX, posY, TOTAL_WIDTH, panelHeight, 10, 0xF0080808);
