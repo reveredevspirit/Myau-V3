@@ -19,22 +19,20 @@ public class Freelook extends Module {
     public final PercentProperty sensitivity = new PercentProperty("Sensitivity", 100);
     public final BooleanProperty invertPitch = new BooleanProperty("Invert Pitch", false);
     public final BooleanProperty smoothReturn = new BooleanProperty("Smooth Return", true);
-    public final PercentProperty returnSpeed = new PercentProperty("Return Speed", 50);
+    public final PercentProperty returnSpeed = new PercentProperty("Return Speed", 60);
 
     private boolean isActive = false;
     private boolean wasPressed = false;
+    private boolean wasActiveLastTick = false;
 
+    private float storedYaw;
+    private float storedPitch;
     private float cameraYaw;
     private float cameraPitch;
-    private float realYaw;
-    private float realPitch;
-
-    private float prevCameraYaw;   // for smooth interpolation if needed
-    private float prevCameraPitch;
 
     public Freelook() {
         super("Freelook", true);
-        this.setKey(Keyboard.KEY_6);  // default to 6
+        this.setKey(Keyboard.KEY_6);  // default keybind: 6
     }
 
     @EventTarget
@@ -43,6 +41,7 @@ public class Freelook extends Module {
 
         boolean keyDown = Keyboard.isKeyDown(this.getKey());
 
+        // Activation logic
         if (mode.getValue() == 0) { // Hold
             isActive = keyDown && mc.currentScreen == null;
         } else { // Toggle
@@ -50,87 +49,90 @@ public class Freelook extends Module {
                 isActive = !isActive;
                 wasPressed = true;
             }
-            if (!keyDown) {
-                wasPressed = false;
-            }
+            if (!keyDown) wasPressed = false;
         }
 
         if (isActive && mc.currentScreen == null) {
 
-            // On activation start: capture real angles
-            if (!wasPressed || !wasActiveLastTick) {
-                realYaw   = mc.thePlayer.rotationYaw;
-                realPitch = mc.thePlayer.rotationPitch;
-                cameraYaw   = realYaw;
-                cameraPitch = realPitch;
-                prevCameraYaw   = cameraYaw;
-                prevCameraPitch = cameraPitch;
+            // On first activation tick: capture real player angles
+            if (!wasActiveLastTick) {
+                storedYaw   = mc.thePlayer.rotationYaw;
+                storedPitch = mc.thePlayer.rotationPitch;
+                cameraYaw   = storedYaw;
+                cameraPitch = storedPitch;
+
+                // Clear any pending mouse movement to prevent jump
+                while (Mouse.next()) {}  // drain queue
+                Mouse.getDX();
+                Mouse.getDY();
             }
 
-            // Mouse deltas
+            // Read mouse deltas
             int dx = Mouse.getDX();
             int dy = Mouse.getDY();
 
-            float sens = sensitivity.getValue().floatValue() / 100f * 0.15f;
+            float sensMult = sensitivity.getValue().floatValue() / 100f * 0.15f;
 
-            cameraYaw += dx * sens;
+            cameraYaw += (float) dx * sensMult;
 
-            float pitchDelta = dy * sens;
-            if (invertPitch.getValue()) {
-                pitchDelta = -pitchDelta;
-            }
-            cameraPitch -= pitchDelta;  // MC pitch is negative-up
+            float pitchChange = (float) dy * sensMult;
+            if (invertPitch.getValue()) pitchChange = -pitchChange;
+            cameraPitch -= pitchChange;
 
-            cameraPitch = Math.max(-90.0F, Math.min(90.0F, cameraPitch));
+            cameraPitch = Math.max(-90f, Math.min(90f, cameraPitch));
 
-            // Freeze player body / movement direction completely
-            mc.thePlayer.rotationYaw   = realYaw;
-            mc.thePlayer.rotationPitch = realPitch;
-            mc.thePlayer.prevRotationYaw   = realYaw;
-            mc.thePlayer.prevRotationPitch = realPitch;
+            // Freeze body / movement direction completely
+            mc.thePlayer.rotationYaw        = storedYaw;
+            mc.thePlayer.rotationPitch      = storedPitch;
+            mc.thePlayer.prevRotationYaw    = storedYaw;
+            mc.thePlayer.prevRotationPitch  = storedPitch;
 
-            // Also freeze render offsets that affect movement/legs
-            mc.thePlayer.renderYawOffset     = realYaw;
-            mc.thePlayer.rotationYawHead     = realYaw;  // head starts at body direction
+            // Prevent renderYawOffset from drifting (affects body/legs in some views)
+            mc.thePlayer.renderYawOffset    = storedYaw;
+            mc.thePlayer.prevRenderYawOffset = storedYaw;
         }
 
-        // When deactivating → smooth return to real angles
-        if (!isActive) {
-            if (smoothReturn.getValue()) {
-                float speed = returnSpeed.getValue().floatValue() / 100f * 0.4f;  // slightly faster feel
-                cameraYaw   += (realYaw   - cameraYaw)   * speed;
-                cameraPitch += (realPitch - cameraPitch) * speed;
-
-                // Snap when very close to avoid micro-jitter
-                if (Math.abs(cameraYaw - realYaw) < 0.4f && Math.abs(cameraPitch - realPitch) < 0.4f) {
-                    cameraYaw   = realYaw;
-                    cameraPitch = realPitch;
-                }
-            } else {
-                cameraYaw   = realYaw;
-                cameraPitch = realPitch;
+        // Deactivation: smooth return of camera/head only
+        if (!isActive && wasActiveLastTick) {
+            // Optional: force one last freeze in case of edge case
+            if (mc.thePlayer != null) {
+                mc.thePlayer.rotationYaw = storedYaw;
+                mc.thePlayer.rotationPitch = storedPitch;
             }
         }
 
         wasActiveLastTick = isActive;
     }
 
-    private boolean wasActiveLastTick = false;
-
     @EventTarget
     public void onRender3D(Render3DEvent event) {
         if (!isEnabled()) return;
 
-        if (isActive || (smoothReturn.getValue() && Math.abs(cameraYaw - realYaw) > 0.1f)) {
-            // Apply to head only → this rotates the camera/view in first person
-            // without turning body/movement direction
+        if (isActive || (smoothReturn.getValue() && Math.abs(cameraYaw - storedYaw) > 0.25f)) {
+            // Only rotate the view/head — body stays locked
             mc.thePlayer.rotationYawHead = cameraYaw;
 
-            // Optional: also set renderYawOffset if legs/arms look wrong in 1st person mods
-            // mc.thePlayer.renderYawOffset = cameraYaw;  // usually leave this at realYaw
+            // Optional: if arms/hands look wrong in some animation mods, try:
+            // mc.thePlayer.renderYawOffset = cameraYaw;  // but usually keep frozen
+
+            // During smooth return, interpolate camera back
+            if (!isActive && smoothReturn.getValue()) {
+                float speed = returnSpeed.getValue().floatValue() / 100f * 0.45f;
+                cameraYaw   += (storedYaw   - cameraYaw)   * speed;
+                cameraPitch += (storedPitch - cameraPitch) * speed;
+
+                // Snap when close enough
+                if (Math.abs(cameraYaw - storedYaw) < 0.6f && Math.abs(cameraPitch - storedPitch) < 0.6f) {
+                    cameraYaw   = storedYaw;
+                    cameraPitch = storedPitch;
+                    mc.thePlayer.rotationYawHead = storedYaw;
+                }
+            }
         } else {
-            // Ensure reset when inactive and no smoothing left
-            mc.thePlayer.rotationYawHead = realYaw;
+            // Ensure reset when done
+            if (mc.thePlayer != null) {
+                mc.thePlayer.rotationYawHead = mc.thePlayer.rotationYaw;
+            }
         }
     }
 
@@ -141,8 +143,9 @@ public class Freelook extends Module {
         wasActiveLastTick = false;
 
         if (mc.thePlayer != null) {
-            mc.thePlayer.rotationYawHead = mc.thePlayer.rotationYaw;
-            mc.thePlayer.renderYawOffset = mc.thePlayer.rotationYaw;
+            mc.thePlayer.rotationYawHead     = mc.thePlayer.rotationYaw;
+            mc.thePlayer.renderYawOffset     = mc.thePlayer.rotationYaw;
+            mc.thePlayer.prevRenderYawOffset = mc.thePlayer.rotationYaw;
         }
     }
 
