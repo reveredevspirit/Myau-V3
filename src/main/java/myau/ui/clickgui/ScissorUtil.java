@@ -26,13 +26,6 @@ public class ScissorUtil {
                 clampedH * scale
         );
     }
-
-// Change from:
-drawSolidRect(x + 163, y, x + 166, y + visibleHeight, 0xFF333333);
-drawSolidRect(x + 163, barY, x + 166, barY + barH, 0xFF55AAFF);
-// To:
-drawSolidRect(x + 203, y, x + 206, y + visibleHeight, 0xFF333333);
-drawSolidRect(x + 203, barY, x + 206, barY + barH, 0xFF55AAFF);
     
     public static void disable() {
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
