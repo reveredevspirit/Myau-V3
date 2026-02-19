@@ -199,8 +199,8 @@ public class CategoryComponent {
 
     // === Rise‑style rounded rectangle ===
     private void drawRoundedRect(int x, int y, int w, int h, int r, Color c) {
-        GuiUtils.drawRoundedRect(x, y, x + w, y + h, r, c);
-    }
+        GuiUtils.drawRoundedRect(x, y, w, h, r, c);
+}
 
     // === Rise‑style shadow ===
     private void drawShadow(int x, int y, int w, int h) {
