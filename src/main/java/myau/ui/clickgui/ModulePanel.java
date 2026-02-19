@@ -54,10 +54,25 @@ public class ModulePanel {
                     mouseY >= offsetY && mouseY <= offsetY + height;
 
             // Module row background
-            RoundedUtils.drawRoundedRect(x, offsetY, width, height, 4, hovered ? 0xFF2A2A2A : 0xFF1A1A1A);
+            // Module row background
+            int rowColor;
+            if (module.isEnabled()) {
+            rowColor = 0xFF0D2137; // dark blue when enabled
+        } else if (hovered) {
+            rowColor = 0xFF2A2A2A;
+        } else {
+            rowColor = 0xFF1A1A1A;
+    }
+            RoundedUtils.drawRoundedRect(x, offsetY, width, height, 4, rowColor);
+
+            // Blue left accent bar when enabled
+            if (module.isEnabled()) {
+            RoundedUtils.drawRoundedRect(x, offsetY, 3, height, 2, 0xFF55AAFF);
+    }
 
             // Module name
-            mc.fontRendererObj.drawString(module.getName(), x + 5, offsetY + 5, 0xFFFFFFFF);
+            int nameColor = module.isEnabled() ? 0xFF55AAFF : (hovered ? 0xFFCCCCCC : 0xFFFFFFFF);
+            mc.fontRendererObj.drawString(module.getName(), x + 7, offsetY + 5, nameColor);
 
             // Toggle animation
             boolean enabled = module.isEnabled();
