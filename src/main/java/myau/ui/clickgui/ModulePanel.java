@@ -46,10 +46,10 @@ public class ModulePanel {
     }
 
     public void handleScroll(int delta) {
-        int maxScroll = Math.max(0, getContentHeight() - visibleHeight);
-        scrollOffset += delta > 0 ? -8 : 8;
-        scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
-    }
+    int maxScroll = Math.max(0, getContentHeight() - visibleHeight);
+    scrollOffset += delta > 0 ? -12 : 12;
+    scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
+}
 
     // ----------------------------------------------------------------
     // RENDER
@@ -66,7 +66,7 @@ public class ModulePanel {
                 if (!module.getName().toLowerCase().contains(search.toLowerCase())) continue;
             }
 
-            int width  = 160;
+            int width  = 200;
             int height = 16;
 
             if (offsetY + height < clipTop || offsetY > clipBottom) {
@@ -227,7 +227,7 @@ public class ModulePanel {
         int offsetY = panelY - scrollOffset;
 
         for (Module module : category.getModules()) {
-            int width  = 160;
+            int width  = 200;
             int height = 16;
 
             boolean hovered =
