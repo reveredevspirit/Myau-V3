@@ -5,6 +5,7 @@ import myau.Myau;
 import myau.mixin.IAccessorMinecraft;
 import myau.module.Module;
 import myau.module.BooleanSetting;
+import myau.module.DropdownSetting;
 import myau.module.KeybindSetting;
 import myau.module.Setting;
 import myau.module.SliderSetting;
@@ -91,6 +92,9 @@ public class Config {
                                 } else if (setting instanceof KeybindSetting) {
                                     ((KeybindSetting) setting).setKeyCode(
                                         settingsObj.get(setting.getName()).getAsInt());
+                                } else if (setting instanceof DropdownSetting) {
+                                    ((DropdownSetting) setting).setIndex(
+                                        settingsObj.get(setting.getName()).getAsInt());
                                 }
                             } catch (Exception e) {
                                 ((IAccessorMinecraft) mc).getLogger().warn(
@@ -175,6 +179,9 @@ public class Config {
                             } else if (setting instanceof KeybindSetting) {
                                 settingsObj.addProperty(setting.getName(),
                                     ((KeybindSetting) setting).getKeyCode());
+                            } else if (setting instanceof DropdownSetting) {
+                                settingsObj.addProperty(setting.getName(),
+                                    ((DropdownSetting) setting).getIndex());
                             }
                         } catch (Exception e) {
                             ((IAccessorMinecraft) mc).getLogger().warn(
