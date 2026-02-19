@@ -15,14 +15,14 @@ public class ArraylistHUD {
     public void render() {
         ScaledResolution sr = new ScaledResolution(mc);
 
-        // Stream over all modules correctly
+        // Correct module stream
         Myau.moduleManager.modules.values().stream()
                 .filter(Module::isEnabled)
                 .sorted(Comparator.comparing(m -> mc.fontRendererObj.getStringWidth(m.getName())).reversed())
                 .forEach(module -> {
                     String name = module.getName();
 
-                    // Get HUD color
+                    // HUD color
                     Color color = Myau.moduleManager.getModule(myau.module.modules.HUD.class)
                             .getColor(System.currentTimeMillis());
 
