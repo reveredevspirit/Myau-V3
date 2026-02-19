@@ -30,26 +30,29 @@ public abstract class Module {
         return enabled;
     }
 
-    protected void onEnable() {
-    }
-
-    protected void onDisable() {
-    }
-
-    public void onUpdate() {
-    }
-
-    public void onRender2D() {
-    }
+    protected void onEnable() {}
+    protected void onDisable() {}
+    public void onUpdate() {}
+    public void onRender2D() {}
 
     public String getName() {
         return name;
     }
 
-    // If your project later needs these (from config/clickgui errors), you can add dummies:
-    // public java.util.List getSettings() { return new java.util.ArrayList(); }
-    // public int getKey() { return 0; }
-    // public void setKey(int key) {}
-    // public boolean isHidden() { return false; }
-    // public void setHidden(boolean hidden) {}
+    // Dummy methods to stop config/clickgui errors (add real impl later)
+    public java.util.List getSettings() {
+        return new java.util.ArrayList();
+    }
+
+    public int getKey() {
+        return 0;
+    }
+
+    public void setKey(int key) {}
+
+    public boolean isHidden() {
+        return false;
+    }
+
+    public void setHidden(boolean hidden) {}
 }
