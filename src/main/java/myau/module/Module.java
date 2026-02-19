@@ -1,69 +1,48 @@
 package myau.module;
 
-import myau.Myau;
-import myau.event.Event;
-import myau.settings.Setting; // if you have settings system, otherwise remove
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.MathHelper;
-import org.lwjgl.input.Keyboard;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public abstract class Module {
 
     protected static final Minecraft mc = Minecraft.getMinecraft();
 
     private final String name;
-    private final String description;
-    private final ModuleCategory category;
-    private int keybind = Keyboard.KEY_NONE;
+    private boolean enabled = false;  // or "toggled" if your base uses that name
 
-    private boolean toggled = false;
-
-    // Animation fields for ArrayList slide/fade
+    // Animation fields for ArrayList (slide + fade)
     private long lastToggleTime = 0L;
-    private float animationProgress = 0.0f;  // 0.0 = hidden (slid out), 1.0 = fully visible
+    private float animationProgress = 0.0f;  // 0.0 = hidden/slid out, 1.0 = fully visible
 
-    // If your base uses a list of settings
-    protected List<Setting> settings = new ArrayList<>();
-
-    public Module(String name, String description, ModuleCategory category) {
+    public Module(String name) {
         this.name = name;
-        this.description = description;
-        this.category = category;
     }
 
-    public Module(String name, String description, ModuleCategory category, int keybind) {
-        this(name, description, category);
-        this.keybind = keybind;
-    }
-
-    // Toggle logic
+    // Toggle method - adjust if your base has different logic (e.g. setEnabled, toggleModule)
     public void toggle() {
-        setToggled(!toggled);
+        setEnabled(!isEnabled());
     }
 
-    public void setToggled(boolean toggled) {
-        if (this.toggled == toggled) return;
+    public void setEnabled(boolean enabled) {
+        if (this.enabled == enabled) return;
 
-        this.toggled = toggled;
+        this.enabled = enabled;
         lastToggleTime = System.currentTimeMillis();
 
-        if (toggled) {
+        if (enabled) {
             onEnable();
         } else {
             onDisable();
         }
     }
 
-    public boolean isToggled() {
-        return toggled;
+    public boolean isEnabled() {
+        return enabled;
     }
 
-    // Animation update (call every frame/tick)
+    // Animation update - call this every tick/frame
     public void updateAnimation() {
-        float target = isToggled() ? 1.0f : 0.0f;
+        float target = isEnabled() ? 1.0f : 0.0f;
         animationProgress = MathHelper.lerp(0.14f, animationProgress, target);
     }
 
@@ -71,61 +50,36 @@ public abstract class Module {
         return animationProgress;
     }
 
-    // Optional: snap animation (e.g. on config load)
+    // Optional reset (e.g. after loading config)
     public void resetAnimation() {
-        animationProgress = isToggled() ? 1.0f : 0.0f;
+        animationProgress = isEnabled() ? 1.0f : 0.0f;
     }
 
-    // Lifecycle methods (override in child modules)
-    public void onEnable() {
-        // Called when module is enabled
+    // Lifecycle - override in child modules (e.g. KillAura, Fly)
+    protected void onEnable() {
+        // Add enable logic here if needed
     }
 
-    public void onDisable() {
-        // Called when module is disabled
+    protected void onDisable() {
+        // Add disable logic here if needed
     }
 
+    // Tick method - many bases call this per module every tick
     public void onUpdate() {
-        // Called every tick if enabled (add updateAnimation() here if no global call)
-        updateAnimation();  // ← optional fallback if no global tick loop
+        // Optional: put animation update here as fallback
+        // updateAnimation();
     }
 
+    // Render if module draws something itself (rare for arraylist)
     public void onRender2D() {
-        // Called every render frame (if needed for custom drawing)
+        // optional
     }
 
-    // Event bus methods (if your base uses custom events)
-    public void onEvent(Event event) {
-        // Override if needed for specific events
-    }
-
-    // Getters
+    // Basic getters
     public String getName() {
         return name;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public ModuleCategory getCategory() {
-        return category;
-    }
-
-    public int getKeybind() {
-        return keybind;
-    }
-
-    public void setKeybind(int keybind) {
-        this.keybind = keybind;
-    }
-
-    public List<Setting> getSettings() {
-        return settings;
-    }
-
-    // Optional: add setting helper
-    protected void addSetting(Setting setting) {
-        settings.add(setting);
-    }
+    // If your modules have display names/suffixes, add:
+    // public String getDisplayName() { return name; }
 }
