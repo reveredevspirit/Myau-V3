@@ -24,7 +24,11 @@ public class Autoblock extends Module {
     // ----------------------------------------------------------------
     // SETTINGS (visible in GUI)
     // ----------------------------------------------------------------
-    public final SliderSetting mode         = register(new SliderSetting("Mode",          10, 0, 11, 1));
+    public final DropdownSetting mode = register(new DropdownSetting("Mode", 10,
+        "NONE", "VANILLA", "SPOOF", "HYPIXEL", "BLINK",
+        "INTERACT", "SWAP", "LEGIT", "FAKE", "LAGRANGE",
+        "GRIM", "SLINKY"
+));
     public final SliderSetting blockRange   = register(new SliderSetting("Block Range",    6.0, 3.0, 8.0, 0.1));
     public final SliderSetting minCPS       = register(new SliderSetting("Min APS",        6.0, 1.0, 20.0, 1.0));
     public final SliderSetting maxCPS       = register(new SliderSetting("Max APS",        9.0, 1.0, 20.0, 1.0));
