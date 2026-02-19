@@ -1,7 +1,7 @@
 package myau.module.modules;
 
 import myau.module.Module;
-import myau.ui.ClickGui;
+import myau.ui.clickgui.ModuleRegistry;
 import myau.ui.clickgui.Rise6ClickGui;
 import net.minecraft.client.Minecraft;
 import org.lwjgl.input.Keyboard;
@@ -21,13 +21,16 @@ public class GuiModule extends Module {
         // GUI modules disable themselves immediately
         setEnabled(false);
 
-        // Create Rise6ClickGui instance ONLY
+        // Initialize module lists (replaces old ClickGui constructor)
+        ModuleRegistry.init();
+
+        // Create Rise6ClickGui instance using the new registry
         clickGui = new Rise6ClickGui(
-                ClickGui.combatModules,
-                ClickGui.movementModules,
-                ClickGui.playerModules,
-                ClickGui.renderModules,
-                ClickGui.miscModules
+                ModuleRegistry.combatModules,
+                ModuleRegistry.movementModules,
+                ModuleRegistry.playerModules,
+                ModuleRegistry.renderModules,
+                ModuleRegistry.miscModules
         );
 
         // Open the GUI
