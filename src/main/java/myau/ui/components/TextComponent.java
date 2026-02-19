@@ -1,10 +1,8 @@
-
 package myau.ui.components;
 
 import myau.enums.ChatColors;
 import myau.property.properties.BooleanProperty;
 import myau.property.properties.TextProperty;
-import myau.ui.ClickGui;
 import myau.ui.Component;
 import myau.ui.callback.GuiInput;
 import net.minecraft.client.Minecraft;
