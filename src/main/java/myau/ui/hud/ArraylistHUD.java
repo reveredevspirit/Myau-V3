@@ -7,48 +7,67 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 public class ArraylistHUD {
-
     private final Minecraft mc = Minecraft.getMinecraft();
 
     public void render() {
         ScaledResolution sr = new ScaledResolution(mc);
+        HUD hud = (HUD) Myau.moduleManager.getModule(HUD.class);
+        if (hud == null || !hud.isEnabled()) return;
 
-        Myau.moduleManager.modules.values().stream()
-                .filter(Module::isEnabled)
-                .sorted(Comparator.comparing(
-                        (Module m) -> mc.fontRendererObj.getStringWidth(m.getName())
-                ).reversed())
-                .forEach(module -> {
+        Color color = hud.getColor(System.currentTimeMillis());
+        boolean shadow = hud.shadow.getValue();
 
-                    HUD hud = (HUD) Myau.moduleManager.getModule(HUD.class);
-                    Color color = hud.getColor(System.currentTimeMillis());
-
-                    String name = module.getName();
-
-                    int x = sr.getScaledWidth() - mc.fontRendererObj.getStringWidth(name) - 4;
-                    int y = 10 + (mc.fontRendererObj.FONT_HEIGHT + 2) *
-                            getModuleIndex(module);
-
-                    mc.fontRendererObj.drawStringWithShadow(
-                            name,
-                            x,
-                            y,
-                            color.getRGB()
-                    );
-                });
-    }
-
-    private int getModuleIndex(Module module) {
-        int index = 0;
+        // Build sorted list of enabled modules
+        List<Module> enabled = new ArrayList<>();
         for (Module m : Myau.moduleManager.modules.values()) {
-            if (m.isEnabled()) {
-                if (m == module) break;
-                index++;
+            if (m.isEnabled() && !m.isHidden()) enabled.add(m);
+        }
+
+        // Sort by total display width descending (name + suffix)
+        enabled.sort(Comparator.comparingInt((Module m) -> {
+            String[] suffix = m.getSuffix();
+            String suffixStr = suffix.length > 0 ? " " + suffix[0] : "";
+            return mc.fontRendererObj.getStringWidth(m.getName() + suffixStr);
+        }).reversed());
+
+        int fontHeight = mc.fontRendererObj.FONT_HEIGHT;
+        int lineHeight = fontHeight + 2;
+
+        for (int i = 0; i < enabled.size(); i++) {
+            Module module = enabled.get(i);
+
+            String name = module.getName();
+            String[] suffixArr = module.getSuffix();
+            String suffix = suffixArr.length > 0 ? " " + suffixArr[0] : "";
+
+            int nameW   = mc.fontRendererObj.getStringWidth(name);
+            int suffixW = mc.fontRendererObj.getStringWidth(suffix);
+            int totalW  = nameW + suffixW;
+
+            // Right-aligned, flush to screen edge
+            int x = sr.getScaledWidth() - totalW - 4;
+            int y = 4 + i * lineHeight;
+
+            // Draw name in white
+            if (shadow) {
+                mc.fontRendererObj.drawStringWithShadow(name, x, y, 0xFFFFFFFF);
+            } else {
+                mc.fontRendererObj.drawString(name, x, y, 0xFFFFFFFF);
+            }
+
+            // Draw suffix in HUD color
+            if (!suffix.isEmpty()) {
+                if (shadow) {
+                    mc.fontRendererObj.drawStringWithShadow(suffix, x + nameW, y, color.getRGB());
+                } else {
+                    mc.fontRendererObj.drawString(suffix, x + nameW, y, color.getRGB());
+                }
             }
         }
-        return index;
     }
 }
