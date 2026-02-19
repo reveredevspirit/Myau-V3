@@ -12,6 +12,7 @@ public class Rise6ClickGui extends GuiScreen {
 
     private final List<SidebarCategory> categories = new ArrayList<>();
     private SidebarCategory selectedCategory;
+    private float openAnim = 0f;
 
     private SearchBar searchBar;
     private ModulePanel modulePanel;
@@ -41,16 +42,27 @@ public class Rise6ClickGui extends GuiScreen {
 
         ScaledResolution sr = new ScaledResolution(mc);
 
-        drawRect(0, 0, sr.getScaledWidth(), sr.getScaledHeight(), 0xAA000000);
+        // Smooth opening animation
+        openAnim += (1f - openAnim) * 0.15f;
 
+        int guiX = (int)(130 + (20 * (1 - openAnim))); // slide from right
+        int guiAlpha = (int)(180 * openAnim);           // fade in
+
+        // Fade overlay
+        drawRect(0, 0, sr.getScaledWidth(), sr.getScaledHeight(), (guiAlpha << 24));
+
+        // Sidebar
         int yOffset = 40;
         for (SidebarCategory cat : categories) {
             cat.render(10, yOffset, mouseX, mouseY, selectedCategory == cat);
             yOffset += 28;
         }
 
+        // Search bar
         searchBar.render(130, 30, mouseX, mouseY);
-        modulePanel.render(130, 60, mouseX, mouseY, searchBar.getText());
+
+        // Module panel (animated X)
+        modulePanel.render(guiX, 60, mouseX, mouseY, searchBar.getText());
 
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
