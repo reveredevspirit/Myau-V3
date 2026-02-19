@@ -260,4 +260,20 @@ public class ModulePanel {
         int a2 = (col2 >> 24) & 0xFF, r2 = (col2 >> 16) & 0xFF, g2 = (col2 >> 8) & 0xFF, b2 = col2 & 0xFF;
         return ((int)(a1+(a2-a1)*t) << 24) | ((int)(r1+(r2-r1)*t) << 16) | ((int)(g1+(g2-g1)*t) << 8) | (int)(b1+(b2-b1)*t);
     }
+
+    public int getContentHeight() {
+    int h = 0;
+    for (Module module : category.getModules()) {
+        h += 17; // row height + gap
+
+        if (expandedModule == module) {
+            for (Setting setting : module.getSettings()) {
+                if (setting instanceof SliderSetting)   h += 23;
+                else if (setting instanceof KeybindSetting) h += 17;
+            }
+            h += 2;
+        }
+    }
+    return h;
+}
 }
