@@ -8,7 +8,7 @@ import myau.event.types.Priority;
 import myau.events.UpdateEvent;
 import myau.mixin.IAccessorPlayerControllerMP;
 import myau.module.Module;
-import myau.property.properties.*;
+import myau.module.SliderSetting;
 import myau.util.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.item.ItemStack;
@@ -21,25 +21,35 @@ import net.minecraft.util.EnumFacing;
 public class Autoblock extends Module {
     private static final Minecraft mc = Minecraft.getMinecraft();
 
-    public final ModeProperty mode;
-    public final BooleanProperty requirePress;
-    public final BooleanProperty requireAttack;
-    public final FloatProperty blockRange;
-    public final FloatProperty minCPS;
-    public final FloatProperty maxCPS;
-    public final BooleanProperty autoRelease;
-    public final FloatProperty releaseDelay;
+    // ----------------------------------------------------------------
+    // SETTINGS (visible in GUI)
+    // ----------------------------------------------------------------
+    public final SliderSetting mode         = register(new SliderSetting("Mode",          10, 0, 11, 1));
+    public final SliderSetting blockRange   = register(new SliderSetting("Block Range",    6.0, 3.0, 8.0, 0.1));
+    public final SliderSetting minCPS       = register(new SliderSetting("Min APS",        6.0, 1.0, 20.0, 1.0));
+    public final SliderSetting maxCPS       = register(new SliderSetting("Max APS",        9.0, 1.0, 20.0, 1.0));
+    public final SliderSetting releaseDelay = register(new SliderSetting("Release Delay",  2.0, 1.0, 5.0,  0.5));
 
     // SLINKY settings
-    public final FloatProperty slinkyMaxHold;
-    public final FloatProperty slinkyMaxHurt;
-    public final FloatProperty slinkyLagChance;
-    public final FloatProperty slinkyLagDuration;
-    public final BooleanProperty slinkyReblockInstant;
-    public final BooleanProperty slinkyRightClick;
-    public final BooleanProperty slinkyLeftClick;
-    public final BooleanProperty slinkyDamaged;
+    public final SliderSetting slinkyMaxHold     = register(new SliderSetting("Slinky Max Hold",     4.0,   1.0, 10.0,  0.5));
+    public final SliderSetting slinkyMaxHurt     = register(new SliderSetting("Slinky Max Hurt",     8.0,   1.0, 10.0,  0.5));
+    public final SliderSetting slinkyLagChance   = register(new SliderSetting("Slinky Lag Chance",  35.0,   0.0, 100.0, 1.0));
+    public final SliderSetting slinkyLagDuration = register(new SliderSetting("Slinky Lag Duration",150.0,  0.0, 500.0, 10.0));
 
+    // ----------------------------------------------------------------
+    // PLAIN BOOLEANS (not shown in GUI, kept as before)
+    // ----------------------------------------------------------------
+    private boolean requirePress       = false;
+    private boolean requireAttack      = true;
+    private boolean autoRelease        = true;
+    private boolean slinkyReblockInstant = true;
+    private boolean slinkyRightClick   = true;
+    private boolean slinkyLeftClick    = false;
+    private boolean slinkyDamaged      = true;
+
+    // ----------------------------------------------------------------
+    // INTERNAL STATE
+    // ----------------------------------------------------------------
     private boolean blockingState = false;
     private boolean fakeBlockState = false;
     private boolean isBlocking = false;
@@ -51,48 +61,29 @@ public class Autoblock extends Module {
 
     public Autoblock() {
         super("Autoblock", false);
-
-        this.mode = new ModeProperty(
-                "mode",
-                10,
-                new String[]{
-                        "NONE", "VANILLA", "SPOOF", "HYPIXEL", "BLINK",
-                        "INTERACT", "SWAP", "LEGIT", "FAKE", "LAGRANGE",
-                        "GRIM", "SLINKY"
-                }
-        );
-
-        this.requirePress = new BooleanProperty("require-press", false);
-        this.requireAttack = new BooleanProperty("require-attack", true);
-        this.blockRange = new FloatProperty("block-range", 6.0F, 3.0F, 8.0F);
-        this.minCPS = new FloatProperty("min-aps", 6.0F, 1.0F, 20.0F);
-        this.maxCPS = new FloatProperty("max-aps", 9.0F, 1.0F, 20.0F);
-        this.autoRelease = new BooleanProperty("auto-release", true);
-        this.releaseDelay = new FloatProperty("release-delay", 2.0F, 1.0F, 5.0F);
-
-        // SLINKY settings
-        this.slinkyMaxHold = new FloatProperty("slinky-max-hold", 4.0F, 1.0F, 10.0F);
-        this.slinkyMaxHurt = new FloatProperty("slinky-max-hurt", 8.0F, 1.0F, 10.0F);
-        this.slinkyLagChance = new FloatProperty("slinky-lag-chance", 35.0F, 0.0F, 100.0F);
-        this.slinkyLagDuration = new FloatProperty("slinky-lag-duration", 150.0F, 0.0F, 500.0F);
-        this.slinkyReblockInstant = new BooleanProperty("slinky-reblock-instant", true);
-        this.slinkyRightClick = new BooleanProperty("slinky-right-click", true);
-        this.slinkyLeftClick = new BooleanProperty("slinky-left-click", false);
-        this.slinkyDamaged = new BooleanProperty("slinky-damaged", true);
     }
 
+    // ----------------------------------------------------------------
+    // HELPERS
+    // ----------------------------------------------------------------
+    private int getMode()           { return (int) mode.getValue(); }
+    private float getBlockRange()   { return (float) blockRange.getValue(); }
+    private float getMinCPS()       { return (float) minCPS.getValue(); }
+    private float getMaxCPS()       { return (float) maxCPS.getValue(); }
+    private float getReleaseDelay() { return (float) releaseDelay.getValue(); }
+
     private long getBlockDelay() {
-        return (long) (1000.0F / RandomUtil.nextLong(
-                this.minCPS.getValue().longValue(),
-                this.maxCPS.getValue().longValue()
+        return (long)(1000.0F / RandomUtil.nextLong(
+                (long) getMinCPS(),
+                (long) getMaxCPS()
         ));
     }
 
     private boolean canAutoblock() {
         if (!ItemUtil.isHoldingSword()) return false;
-        if (this.requirePress.getValue() && !PlayerUtil.isUsingItem()) return false;
+        if (requirePress && !PlayerUtil.isUsingItem()) return false;
         KillAura ka = (KillAura) Myau.moduleManager.modules.get(KillAura.class);
-        if (this.requireAttack.getValue() && !ka.isAttackAllowed()) return false;
+        if (requireAttack && !ka.isAttackAllowed()) return false;
         return true;
     }
 
@@ -100,7 +91,7 @@ public class Autoblock extends Module {
         return mc.theWorld.loadedEntityList.stream().anyMatch(
                 entity -> entity instanceof net.minecraft.entity.EntityLivingBase
                         && RotationUtil.distanceToEntity((net.minecraft.entity.EntityLivingBase) entity)
-                        <= this.blockRange.getValue()
+                        <= getBlockRange()
         );
     }
 
@@ -109,7 +100,7 @@ public class Autoblock extends Module {
         PacketUtil.sendPacket(new C08PacketPlayerBlockPlacement(stack));
         mc.thePlayer.setItemInUse(stack, stack.getMaxItemUseDuration());
         this.blockingState = true;
-        this.releaseTick = (int) this.releaseDelay.getValue().floatValue();
+        this.releaseTick = (int) getReleaseDelay();
     }
 
     private void stopBlock() {
@@ -135,6 +126,9 @@ public class Autoblock extends Module {
         return Math.floorMod(currentSlot - 1, 9);
     }
 
+    // ----------------------------------------------------------------
+    // MAIN UPDATE
+    // ----------------------------------------------------------------
     @EventTarget(Priority.LOW)
     public void onUpdate(UpdateEvent event) {
         if (!this.isEnabled()) {
@@ -156,7 +150,7 @@ public class Autoblock extends Module {
 
         if (this.blockDelayMS > 0L) this.blockDelayMS -= 50L;
 
-        if (this.autoRelease.getValue() && this.blockingState && this.releaseTick > 0) {
+        if (autoRelease && this.blockingState && this.releaseTick > 0) {
             this.releaseTick--;
             if (this.releaseTick <= 0) stopBlock();
         }
@@ -173,7 +167,7 @@ public class Autoblock extends Module {
 
         boolean swap = false;
 
-        switch (this.mode.getValue()) {
+        switch (getMode()) {
 
             case 0: // NONE
                 this.isBlocking = false;
@@ -297,17 +291,10 @@ public class Autoblock extends Module {
             case 11: // SLINKY
                 boolean allow = false;
 
-                if (this.slinkyRightClick.getValue() && PlayerUtil.isUsingItem())
-                    allow = true;
-
-                if (this.slinkyLeftClick.getValue() && mc.gameSettings.keyBindAttack.isKeyDown())
-                    allow = true;
-
-                if (this.slinkyDamaged.getValue() && mc.thePlayer.hurtTime > 0)
-                    allow = true;
-
-                if (mc.thePlayer.hurtTime > this.slinkyMaxHurt.getValue())
-                    allow = false;
+                if (slinkyRightClick && PlayerUtil.isUsingItem())           allow = true;
+                if (slinkyLeftClick && mc.gameSettings.keyBindAttack.isKeyDown()) allow = true;
+                if (slinkyDamaged && mc.thePlayer.hurtTime > 0)             allow = true;
+                if (mc.thePlayer.hurtTime > (float) slinkyMaxHurt.getValue()) allow = false;
 
                 if (!allow) {
                     if (this.blockingState) stopBlock();
@@ -316,18 +303,17 @@ public class Autoblock extends Module {
                     break;
                 }
 
-                if (RandomUtil.nextInt(0, 100) < this.slinkyLagChance.getValue()) {
-                    this.blockDelayMS = this.slinkyLagDuration.getValue().longValue();
+                if (RandomUtil.nextInt(0, 100) < (float) slinkyLagChance.getValue()) {
+                    this.blockDelayMS = (long) slinkyLagDuration.getValue();
                 }
 
-                if (this.slinkyReblockInstant.getValue()) {
+                if (slinkyReblockInstant) {
                     swap = !this.blockingState;
                 } else {
-                    if (this.blockDelayMS <= 0L)
-                        swap = true;
+                    if (this.blockDelayMS <= 0L) swap = true;
                 }
 
-                this.releaseTick = this.slinkyMaxHold.getValue().intValue();
+                this.releaseTick = (int) slinkyMaxHold.getValue();
                 this.isBlocking = true;
                 this.fakeBlockState = false;
                 break;
