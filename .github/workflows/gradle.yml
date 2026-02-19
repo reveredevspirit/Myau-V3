@@ -1,12 +1,3 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-#
-# This workflow will build a Java project with Gradle and cache/restore any dependencies to
-# improve the workflow execution time
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-gradle
-
 name: Java CI with Gradle
 
 on:
@@ -22,7 +13,8 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -34,8 +26,13 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4.0.0
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Build with Gradle Wrapper
-        run: ./gradlew build   # ← Add these flags
-    # Or even more verbose: ./gradlew build --stacktrace --info --scan
+      - name: Build with Gradle
+        run: ./gradlew build --stacktrace
+
+      - name: Upload built jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: Myau-V3
+          path: build/libs/*.jar
