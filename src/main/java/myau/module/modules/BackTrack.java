@@ -1,3 +1,4 @@
+// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
 package myau.module.modules;
 
 import java.util.HashMap;
@@ -40,6 +41,7 @@ import net.minecraft.network.play.server.S27PacketExplosion;
 import net.minecraft.network.status.client.C01PacketPing;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.Vec3;
+
 public class BackTrack extends Module {
    private static final Minecraft mc = Minecraft.func_71410_x();
    public final BooleanProperty legit = new BooleanProperty("Legit", false);
@@ -58,20 +60,24 @@ public class BackTrack extends Module {
    private KillAura killAura;
    private EntityLivingBase target;
    private Vec3 lastRealPos;
+
    public BackTrack() {
       super("BackTrack", false);
    }
+
    public void onEnabled() {
       Module m = Myau.moduleManager.getModule(KillAura.class);
       if (m instanceof KillAura) {
          this.killAura = (KillAura)m;
       }
+
       this.incomingPackets.clear();
       this.outgoingPackets.clear();
       this.realPositions.clear();
       this.lastRealPos = null;
       this.timer.reset();
    }
+
    public void onDisabled() {
       this.releaseAll();
       this.incomingPackets.clear();
@@ -79,6 +85,7 @@ public class BackTrack extends Module {
       this.realPositions.clear();
       this.lastRealPos = null;
    }
+
    @EventTarget
    public void onPacket(PacketEvent event) {
       if (this.isEnabled() && mc.field_71439_g != null && mc.field_71441_e != null && this.killAura != null) {
@@ -94,9 +101,11 @@ public class BackTrack extends Module {
             } else if (event.getType() == EventType.SEND) {
                this.handleOutgoing(event);
             }
+
          }
       }
    }
+
    private void handleIncoming(PacketEvent event) {
       Packet<?> packet = event.getPacket();
       if (packet instanceof S14PacketEntity) {
@@ -105,14 +114,17 @@ public class BackTrack extends Module {
          if (e == null) {
             return;
          }
+
          int id = e.func_145782_y();
          Vec3 pos = (Vec3)this.realPositions.getOrDefault(id, new Vec3(0.0, 0.0, 0.0));
          this.realPositions.put(id, pos.func_72441_c((double)p.func_149062_c() / 32.0, (double)p.func_149061_d() / 32.0, (double)p.func_149064_e() / 32.0));
       }
+
       if (packet instanceof S18PacketEntityTeleport) {
          S18PacketEntityTeleport p = (S18PacketEntityTeleport)packet;
          this.realPositions.put(p.func_149451_c(), new Vec3((double)p.func_149449_d() / 32.0, (double)p.func_149448_e() / 32.0, (double)p.func_149446_f() / 32.0));
       }
+
       if (this.shouldQueue()) {
          if (this.blockIncoming(packet)) {
             this.incomingPackets.add(packet);
@@ -121,7 +133,9 @@ public class BackTrack extends Module {
       } else {
          this.releaseIncoming();
       }
+
    }
+
    private void handleOutgoing(PacketEvent event) {
       Packet<?> packet = event.getPacket();
       if ((Boolean)this.legit.getValue()) {
@@ -133,8 +147,10 @@ public class BackTrack extends Module {
          } else {
             this.releaseOutgoing();
          }
+
       }
    }
+
    @EventTarget
    public void onUpdate(UpdateEvent e) {
       if (this.isEnabled() && mc.field_71439_g != null) {
@@ -142,6 +158,7 @@ public class BackTrack extends Module {
             this.releaseAll();
             this.lastRealPos = null;
          }
+
          if (this.target != null) {
             Vec3 real = (Vec3)this.realPositions.get(this.target.func_145782_y());
             if (real != null) {
@@ -150,13 +167,16 @@ public class BackTrack extends Module {
                if (mc.field_71439_g.field_70738_aO > 0 && mc.field_71439_g.field_70737_aN == mc.field_71439_g.field_70738_aO) {
                   this.releaseAll();
                }
+
                if (distReal > (double)(Float)this.hitRange.getValue() || this.timer.hasTimePassed((Integer)this.delay.getValue())) {
                   this.releaseAll();
                }
+
                if ((Boolean)this.onlyIfNeeded.getValue()) {
                   if (distCurrent <= distReal) {
                      this.releaseAll();
                   }
+
                   if (this.lastRealPos != null) {
                      double lastDist = mc.field_71439_g.func_70011_f(this.lastRealPos.field_72450_a, this.lastRealPos.field_72448_b, this.lastRealPos.field_72449_c);
                      if (distReal < lastDist) {
@@ -164,14 +184,17 @@ public class BackTrack extends Module {
                      }
                   }
                }
+
                if ((Boolean)this.legit.getValue() && (Boolean)this.releaseOnHit.getValue() && this.target.field_70737_aN == 1) {
                   this.releaseAll();
                }
+
                this.lastRealPos = real;
             }
          }
       }
    }
+
    @EventTarget
    public void onRender3D(Render3DEvent e) {
       if ((Boolean)this.esp.getValue()) {
@@ -198,6 +221,7 @@ public class BackTrack extends Module {
          }
       }
    }
+
    private boolean shouldQueue() {
       if (this.target == null) {
          return false;
@@ -220,24 +244,30 @@ public class BackTrack extends Module {
          }
       }
    }
+
    private void releaseIncoming() {
       if (mc.func_147114_u() != null) {
          while(!this.incomingPackets.isEmpty()) {
             ((Packet)this.incomingPackets.poll()).func_148833_a(mc.func_147114_u());
          }
+
          this.timer.reset();
       }
    }
+
    private void releaseOutgoing() {
       while(!this.outgoingPackets.isEmpty()) {
          PacketUtil.sendPacketNoEvent((Packet)this.outgoingPackets.poll());
       }
+
       this.timer.reset();
    }
+
    private void releaseAll() {
       this.releaseIncoming();
       this.releaseOutgoing();
    }
+
    private boolean blockIncoming(Packet<?> p) {
       if (!(Boolean)this.onlyIfNeeded.getValue()) {
          if (!(p instanceof S12PacketEntityVelocity) && !(p instanceof S27PacketExplosion)) {
@@ -249,6 +279,7 @@ public class BackTrack extends Module {
          return p instanceof S12PacketEntityVelocity || p instanceof S27PacketExplosion || p instanceof S14PacketEntity || p instanceof S18PacketEntityTeleport || p instanceof S19PacketEntityHeadLook || p instanceof S0FPacketSpawnMob;
       }
    }
+
    private boolean blockOutgoing(Packet<?> p) {
       return p instanceof C03PacketPlayer || p instanceof C02PacketUseEntity || p instanceof C0APacketAnimation || p instanceof C0BPacketEntityAction || p instanceof C08PacketPlayerBlockPlacement || p instanceof C07PacketPlayerDigging || p instanceof C09PacketHeldItemChange || p instanceof C00PacketKeepAlive || p instanceof C01PacketPing;
    }
