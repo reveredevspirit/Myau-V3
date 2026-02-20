@@ -9,24 +9,31 @@ public class ScissorUtil {
     private static final Minecraft mc = Minecraft.getMinecraft();
 
     public static void enable(int x, int y, int width, int height) {
-        ScaledResolution sr = new ScaledResolution(mc);
-        int scale   = sr.getScaleFactor();
-        int screenH = mc.displayHeight;
+        try {
+            ScaledResolution sr = new ScaledResolution(mc);
+            int scale   = sr.getScaleFactor();
+            int screenH = mc.displayHeight;
 
-        int clampedX = Math.max(0, x);
-        int clampedY = Math.max(0, y);
-        int clampedW = Math.max(0, width);
-        int clampedH = Math.max(0, height);
+            int sx = x * scale;
+            int sy = screenH - (y + height) * scale;
+            int sw = width * scale;
+            int sh = height * scale;
 
-        GL11.glEnable(GL11.GL_SCISSOR_TEST);
-        GL11.glScissor(
-                clampedX * scale,
-                screenH - (clampedY + clampedH) * scale,
-                clampedW * scale,
-                clampedH * scale
-        );
+            if (sw <= 0 || sh <= 0) return;
+
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+            GL11.glScissor(
+                    Math.max(0, sx),
+                    Math.max(0, sy),
+                    sw,
+                    sh
+            );
+        } catch (Exception e) {
+            // If scissor fails just disable it
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        }
     }
-    
+
     public static void disable() {
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
     }
