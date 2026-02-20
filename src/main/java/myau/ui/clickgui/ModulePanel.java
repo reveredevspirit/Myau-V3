@@ -31,6 +31,9 @@ public class ModulePanel {
     private int scrollOffset = 0;
     private int visibleHeight = 200;
 
+    // Width of module rows — must match PANEL_WIDTH - padding in Rise6ClickGui
+    private static final int ROW_WIDTH = 220;
+
     public ModulePanel(SidebarCategory category) {
         this.category = category;
     }
@@ -46,27 +49,31 @@ public class ModulePanel {
     }
 
     public void handleScroll(int delta) {
-    int maxScroll = Math.max(0, getContentHeight() - visibleHeight);
-    scrollOffset += delta > 0 ? -12 : 12;
-    scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
-}
+        int maxScroll = Math.max(0, getContentHeight() - visibleHeight);
+        if (delta > 0) {
+            scrollOffset -= 15;
+        } else {
+            scrollOffset += 15;
+        }
+        scrollOffset = Math.max(0, Math.min(maxScroll, scrollOffset));
+    }
 
     // ----------------------------------------------------------------
     // RENDER
     // ----------------------------------------------------------------
     public void render(int x, int y, int mouseX, int mouseY, String search) {
+        int width  = ROW_WIDTH;
         int offsetY = y - scrollOffset;
         int clipTop    = y;
         int clipBottom = y + visibleHeight;
 
-        ScissorUtil.enable(x, clipTop, 200, visibleHeight);
+        ScissorUtil.enable(x, clipTop, width + 20, visibleHeight);
 
         for (Module module : category.getModules()) {
             if (search != null && !search.isEmpty()) {
                 if (!module.getName().toLowerCase().contains(search.toLowerCase())) continue;
             }
 
-            int width  = 200;
             int height = 16;
 
             if (offsetY + height < clipTop || offsetY > clipBottom) {
@@ -135,7 +142,7 @@ public class ModulePanel {
 
                         int barX = x + 10;
                         int barY = offsetY + 17;
-                        int barW = width - 20;
+                        int barW = width - 24;
 
                         RoundedUtils.drawRoundedRect(barX, barY, barW, 4, 2, 0xFF444444);
                         int fillW = Math.max(4, (int)(barW * slider.getPercent()));
@@ -214,8 +221,8 @@ public class ModulePanel {
         if (totalH > visibleHeight) {
             int barH = Math.max(20, (int)((float) visibleHeight / totalH * visibleHeight));
             int barY = y + (int)((float) scrollOffset / Math.max(1, totalH - visibleHeight) * (visibleHeight - barH));
-            drawSolidRect(x + 163, y, x + 166, y + visibleHeight, 0xFF333333);
-            drawSolidRect(x + 163, barY, x + 166, barY + barH, 0xFF55AAFF);
+            drawSolidRect(x + width + 4, y, x + width + 7, y + visibleHeight, 0xFF333333);
+            drawSolidRect(x + width + 4, barY, x + width + 7, barY + barH, 0xFF55AAFF);
         }
     }
 
@@ -224,10 +231,10 @@ public class ModulePanel {
     // ----------------------------------------------------------------
     public void mouseClicked(int panelX, int panelY, int mouseX, int mouseY, int button) {
         int x = panelX;
+        int width = ROW_WIDTH;
         int offsetY = panelY - scrollOffset;
 
         for (Module module : category.getModules()) {
-            int width  = 200;
             int height = 16;
 
             boolean hovered =
@@ -257,7 +264,7 @@ public class ModulePanel {
 
                         int barX = x + 10;
                         int barY = offsetY + 17;
-                        int barW = width - 20;
+                        int barW = width - 24;
 
                         if (button == 0 &&
                             mouseX >= barX && mouseX <= barX + barW &&
