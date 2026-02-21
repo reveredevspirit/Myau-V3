@@ -51,46 +51,46 @@ public class KillAura extends Module {
     private long attackDelayMS = 0L;
 
     // Mode
-    public final DropdownSetting mode         = new DropdownSetting("Mode",        0, "SINGLE", "SWITCH");
-    public final DropdownSetting sort         = new DropdownSetting("Sort",        0, "DISTANCE", "HEALTH", "HURT_TIME", "FOV");
+    public final DropdownSetting mode          = new DropdownSetting("Mode",        0, "SINGLE", "SWITCH");
+    public final DropdownSetting sort          = new DropdownSetting("Sort",        0, "DISTANCE", "HEALTH", "HURT_TIME", "FOV");
 
     // Range
-    public final SliderSetting swingRange     = new SliderSetting("Swing Range",  3.5, 3.0, 6.0, 0.1);
-    public final SliderSetting attackRange    = new SliderSetting("Attack Range", 3.0, 3.0, 6.0, 0.1);
-    public final SliderSetting fov            = new SliderSetting("FOV",          360,  30, 360,   1);
+    public final SliderSetting swingRange      = new SliderSetting("Swing Range",  3.5, 3.0, 6.0, 0.1);
+    public final SliderSetting attackRange     = new SliderSetting("Attack Range", 3.0, 3.0, 6.0, 0.1);
+    public final SliderSetting fov             = new SliderSetting("FOV",          360,  30, 360,   1);
 
     // CPS
-    public final SliderSetting minCPS         = new SliderSetting("Min APS",       14,   1,  20,   1);
-    public final SliderSetting maxCPS         = new SliderSetting("Max APS",       14,   1,  20,   1);
-    public final SliderSetting switchDelay    = new SliderSetting("Switch Delay", 150,   0, 1000, 10);
+    public final SliderSetting minCPS          = new SliderSetting("Min APS",       14,   1,  20,   1);
+    public final SliderSetting maxCPS          = new SliderSetting("Max APS",       14,   1,  20,   1);
+    public final SliderSetting switchDelay     = new SliderSetting("Switch Delay", 150,   0, 1000, 10);
 
     // Rotations
-    public final DropdownSetting rotations    = new DropdownSetting("Rotations",  2, "NONE", "LEGIT", "SILENT", "LOCK_VIEW");
-    public final DropdownSetting moveFix      = new DropdownSetting("Move Fix",   1, "NONE", "SILENT", "STRICT");
-    public final SliderSetting smoothing      = new SliderSetting("Smoothing",    0,   0, 100,   1);
-    public final SliderSetting angleStep      = new SliderSetting("Angle Step",  90,  30, 180,   1);
+    public final DropdownSetting rotations     = new DropdownSetting("Rotations",  2, "NONE", "LEGIT", "SILENT", "LOCK_VIEW");
+    public final DropdownSetting moveFix       = new DropdownSetting("Move Fix",   1, "NONE", "SILENT", "STRICT");
+    public final SliderSetting smoothing       = new SliderSetting("Smoothing",    0,   0, 100,   1);
+    public final SliderSetting angleStep       = new SliderSetting("Angle Step",  90,  30, 180,   1);
 
     // Behaviour
-    public final BooleanSetting throughWalls  = new BooleanSetting("Through Walls",  true);
-    public final BooleanSetting requirePress  = new BooleanSetting("Require Press",  false);
-    public final BooleanSetting allowMining   = new BooleanSetting("Allow Mining",   true);
-    public final BooleanSetting weaponsOnly   = new BooleanSetting("Weapons Only",   true);
-    public final BooleanSetting allowTools    = new BooleanSetting("Allow Tools",    false);
-    public final BooleanSetting inventoryCheck= new BooleanSetting("Inv Check",      true);
-    public final BooleanSetting botCheck      = new BooleanSetting("Bot Check",      true);
+    public final BooleanSetting throughWalls   = new BooleanSetting("Through Walls",  true);
+    public final BooleanSetting requirePress   = new BooleanSetting("Require Press",  false);
+    public final BooleanSetting allowMining    = new BooleanSetting("Allow Mining",   true);
+    public final BooleanSetting weaponsOnly    = new BooleanSetting("Weapons Only",   true);
+    public final BooleanSetting allowTools     = new BooleanSetting("Allow Tools",    false);
+    public final BooleanSetting inventoryCheck = new BooleanSetting("Inv Check",      true);
+    public final BooleanSetting botCheck       = new BooleanSetting("Bot Check",      true);
 
     // Targets
-    public final BooleanSetting players       = new BooleanSetting("Players",    true);
-    public final BooleanSetting bosses        = new BooleanSetting("Bosses",     false);
-    public final BooleanSetting mobs          = new BooleanSetting("Mobs",       false);
-    public final BooleanSetting animals       = new BooleanSetting("Animals",    false);
-    public final BooleanSetting golems        = new BooleanSetting("Golems",     false);
-    public final BooleanSetting silverfish    = new BooleanSetting("Silverfish", false);
-    public final BooleanSetting teams         = new BooleanSetting("Teams",      true);
+    public final BooleanSetting players        = new BooleanSetting("Players",    true);
+    public final BooleanSetting bosses         = new BooleanSetting("Bosses",     false);
+    public final BooleanSetting mobs           = new BooleanSetting("Mobs",       false);
+    public final BooleanSetting animals        = new BooleanSetting("Animals",    false);
+    public final BooleanSetting golems         = new BooleanSetting("Golems",     false);
+    public final BooleanSetting silverfish     = new BooleanSetting("Silverfish", false);
+    public final BooleanSetting teams          = new BooleanSetting("Teams",      true);
 
     // Display
-    public final DropdownSetting showTarget   = new DropdownSetting("Show Target", 0, "NONE", "DEFAULT", "HUD");
-    public final DropdownSetting debugLog     = new DropdownSetting("Debug Log",   0, "NONE", "HEALTH");
+    public final DropdownSetting showTarget    = new DropdownSetting("Show Target", 0, "NONE", "DEFAULT", "HUD");
+    public final DropdownSetting debugLog      = new DropdownSetting("Debug Log",   0, "NONE", "HEALTH");
 
     public KillAura() {
         super("KillAura", false);
@@ -132,11 +132,6 @@ public class KillAura extends Module {
         return target != null ? target.getEntity() : null;
     }
 
-    private boolean isAutoblocking() {
-        Autoblock autoblock = (Autoblock) Myau.moduleManager.modules.get(Autoblock.class);
-        return autoblock != null && autoblock.isEnabled() && autoblock.isPlayerBlocking();
-    }
-
     public boolean isAttackAllowed() {
         Scaffold scaffold = (Scaffold) Myau.moduleManager.modules.get(Scaffold.class);
         if (scaffold.isEnabled()) return false;
@@ -151,9 +146,6 @@ public class KillAura extends Module {
 
     private boolean canAttack() {
         if (inventoryCheck.getValue() && mc.currentScreen instanceof GuiContainer) return false;
-
-        // Suppress attacks while autoblock is holding right click
-        if (isAutoblocking()) return false;
 
         if (!weaponsOnly.getValue()
                 || ItemUtil.hasRawUnbreakingEnchant()
@@ -230,8 +222,12 @@ public class KillAura extends Module {
         if (Myau.playerStateManager.digging || Myau.playerStateManager.placing) return false;
         if (attackDelayMS > 0L) return false;
 
-        // Second guard — don't send attack packet while autoblock is holding right click
-        if (isAutoblocking()) return false;
+        // Stop autoblock before sending attack to prevent multiaction packets
+        // Autoblock re-blocks automatically on the next tick
+        Autoblock autoblock = (Autoblock) Myau.moduleManager.modules.get(Autoblock.class);
+        if (autoblock != null && autoblock.isEnabled() && autoblock.isPlayerBlocking()) {
+            autoblock.stopBlock();
+        }
 
         attackDelayMS += getAttackDelay();
         mc.thePlayer.swingItem();
