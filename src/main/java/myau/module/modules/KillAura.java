@@ -46,7 +46,7 @@ public class KillAura extends Module {
     private static final DecimalFormat df = new DecimalFormat("+0.0;-0.0", new DecimalFormatSymbols(Locale.US));
 
     private final TimerUtil timer = new TimerUtil();
-    private final TimerUtil attackTimer = new TimerUtil(); // Separate timer for attacks
+    private final TimerUtil attackTimer = new TimerUtil();
     private AttackData target = null;
     private boolean hitRegistered = false;
 
@@ -74,8 +74,8 @@ public class KillAura extends Module {
     public final BooleanSetting throughWalls   = new BooleanSetting("Through Walls",  true);
     public final BooleanSetting requirePress   = new BooleanSetting("Require Press",  false);
     public final BooleanSetting allowMining    = new BooleanSetting("Allow Mining",   true);
-    public final BooleanSetting weaponsOnly    = new BooleanSetting("Weapons Only",   false); // Changed to false
-    public final BooleanSetting allowTools     = new BooleanSetting("Allow Tools",    true);  // Changed to true
+    public final BooleanSetting weaponsOnly    = new BooleanSetting("Weapons Only",   false);
+    public final BooleanSetting allowTools     = new BooleanSetting("Allow Tools",    true);
     public final BooleanSetting inventoryCheck = new BooleanSetting("Inv Check",      true);
     public final BooleanSetting botCheck       = new BooleanSetting("Bot Check",      true);
 
@@ -134,8 +134,28 @@ public class KillAura extends Module {
         return target != null ? target.getEntity() : null;
     }
 
+    // Public method for other modules to check if KillAura is ready to attack
+    public boolean isAttackAllowed() {
+        if (mc.thePlayer == null || mc.theWorld == null) return false;
+        
+        try {
+            Scaffold scaffold = (Scaffold) Myau.moduleManager.modules.get(Scaffold.class);
+            if (scaffold != null && scaffold.isEnabled()) return false;
+        } catch (Exception e) {
+            // Ignore scaffold check errors
+        }
+        
+        if (!weaponsOnly.getValue() 
+                || ItemUtil.hasRawUnbreakingEnchant() 
+                || (allowTools.getValue() && ItemUtil.isHoldingTool())) {
+            return !requirePress.getValue() 
+                    || KeyBindUtil.isKeyDown(mc.gameSettings.keyBindAttack.getKeyCode());
+        }
+        return false;
+    }
+
+    // Private method for internal attack checks
     private boolean canAttack() {
-        // Basic checks
         if (mc.thePlayer == null || mc.theWorld == null) return false;
         if (inventoryCheck.getValue() && mc.currentScreen instanceof GuiContainer) return false;
         
@@ -213,6 +233,14 @@ public class KillAura extends Module {
             return golems.getValue() && (!teams.getValue() || !TeamUtil.hasTeamColor(entity));
 
         return false;
+    }
+
+    private boolean isBoxInSwingRange(AxisAlignedBB box) {
+        return RotationUtil.distanceToBox(box) <= swingRange.getValue();
+    }
+
+    private boolean isBoxInAttackRange(AxisAlignedBB box) {
+        return RotationUtil.distanceToBox(box) <= attackRange.getValue();
     }
 
     private boolean performAttack(float yaw, float pitch) {
