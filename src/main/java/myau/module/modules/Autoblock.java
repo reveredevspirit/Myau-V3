@@ -118,7 +118,7 @@ public class Autoblock extends Module {
         return Math.floorMod(currentSlot - 1, 9);
     }
 
-    @EventTarget(Priority.LOW)
+    @EventTarget(Priority.LOWEST)
     public void onUpdate(UpdateEvent event) {
         if (!this.isEnabled()) {
             resetState();
@@ -134,6 +134,16 @@ public class Autoblock extends Module {
         if (event.getType() != EventType.PRE) return;
 
         if (this.blockDelayMS > 0L) this.blockDelayMS -= 50L;
+
+        // Don't re-block for 1-2 ticks after KillAura attacks (Grim PacketOrderI / RotationBreak)
+        if (KillAura.attackCooldownTicks > 0) {
+            if (this.blockingState) stopBlock();
+            Myau.blinkManager.setBlinkState(false, BlinkModules.AUTO_BLOCK);
+            this.isBlocking = false;
+            this.fakeBlockState = false;
+            this.blockTick = 0;
+            return;
+        }
 
         if (autoRelease.getValue() && this.blockingState && this.releaseTick > 0) {
             this.releaseTick--;

@@ -50,6 +50,11 @@ public class KillAura extends Module {
     private AttackData target = null;
     private boolean hitRegistered = false;
 
+    // Grim-compatible delay when using Autoblock: defer attack to next tick after releasing block
+    private boolean deferredAttack = false;
+    private AttackData deferredTarget = null;
+    public static int attackCooldownTicks = 0;
+
     // Mode
     public final DropdownSetting mode          = new DropdownSetting("Mode",        0, "SINGLE", "SWITCH");
     public final DropdownSetting sort          = new DropdownSetting("Sort",        0, "DISTANCE", "HEALTH", "HURT_TIME", "FOV");
@@ -91,6 +96,13 @@ public class KillAura extends Module {
     // Display
     public final DropdownSetting showTarget    = new DropdownSetting("Show Target", 0, "NONE", "DEFAULT", "HUD");
     public final DropdownSetting debugLog      = new DropdownSetting("Debug Log",   0, "NONE", "HEALTH");
+
+    @Override
+    public void onDisabled() {
+        deferredAttack = false;
+        deferredTarget = null;
+        attackCooldownTicks = 0;
+    }
 
     public KillAura() {
         super("KillAura", false);
@@ -250,11 +262,15 @@ public class KillAura extends Module {
         // Check attack delay
         if (!attackTimer.hasTimeElapsed(getAttackDelay())) return false;
 
-        // Stop autoblock before attacking
+        // Stop autoblock before attacking - Grim requires 1 tick between release and attack
         try {
             Autoblock autoblock = (Autoblock) Myau.moduleManager.modules.get(Autoblock.class);
             if (autoblock != null && autoblock.isEnabled() && autoblock.isPlayerBlocking()) {
                 autoblock.stopBlock();
+                // Defer attack to next tick to avoid PacketOrderI / RotationBreak
+                deferredAttack = true;
+                deferredTarget = target;
+                return false;
             }
         } catch (Exception e) {
             // Ignore autoblock errors
@@ -281,6 +297,7 @@ public class KillAura extends Module {
 
             hitRegistered = true;
             attackTimer.reset();
+            attackCooldownTicks = 2;  // Prevents Autoblock from re-blocking same/next tick (Grim)
             return true;
         }
 
@@ -288,10 +305,54 @@ public class KillAura extends Module {
         return false;
     }
 
+    private boolean performDeferredAttack(float yaw, float pitch) {
+        if (deferredTarget == null || !isValidTarget(deferredTarget.getEntity())) {
+            deferredAttack = false;
+            deferredTarget = null;
+            return false;
+        }
+        // Must not be blocking when we execute deferred attack
+        try {
+            Autoblock autoblock = (Autoblock) Myau.moduleManager.modules.get(Autoblock.class);
+            if (autoblock != null && autoblock.isEnabled() && autoblock.isPlayerBlocking()) {
+                return false;  // Still blocking, wait another tick
+            }
+        } catch (Exception e) { /* ignore */ }
+        target = deferredTarget;
+        boolean result = performAttack(yaw, pitch);
+        deferredAttack = false;
+        deferredTarget = null;
+        return result;
+    }
+
     @EventTarget(Priority.LOW)
     public void onUpdate(UpdateEvent event) {
         if (!isEnabled() || event.getType() != EventType.PRE) return;
         if (mc.thePlayer == null || mc.theWorld == null) return;
+
+        // Decay attack cooldown for Autoblock coordination
+        if (attackCooldownTicks > 0) attackCooldownTicks--;
+
+        // Execute deferred attack from previous tick (after block release)
+        if (deferredAttack && deferredTarget != null) {
+            if (rotations.getIndex() == 2 || rotations.getIndex() == 3) {
+                float[] rots = RotationUtil.getRotationsToBox(
+                        deferredTarget.getBox(),
+                        event.getYaw(),
+                        event.getPitch(),
+                        (float) angleStep.getValue() + RandomUtil.nextFloat(-5.0F, 5.0F),
+                        (float) smoothing.getValue() / 100.0F);
+                event.setRotation(rots[0], rots[1], 1);
+                if (rotations.getIndex() == 3)
+                    Myau.rotationManager.setRotation(rots[0], rots[1], 1, true);
+                if (moveFix.getIndex() != 0 || rotations.getIndex() == 3)
+                    event.setPervRotation(rots[0], 1);
+                performDeferredAttack(rots[0], rots[1]);
+            } else {
+                performDeferredAttack(event.getYaw(), event.getPitch());
+            }
+            return;  // Don't process normal target this tick
+        }
 
         // Find target if we don't have one
         if (target == null || !isValidTarget(target.getEntity()) || 
