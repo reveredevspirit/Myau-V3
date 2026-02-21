@@ -46,9 +46,9 @@ public class KillAura extends Module {
     private static final DecimalFormat df = new DecimalFormat("+0.0;-0.0", new DecimalFormatSymbols(Locale.US));
 
     private final TimerUtil timer = new TimerUtil();
+    private final TimerUtil attackTimer = new TimerUtil(); // Separate timer for attacks
     private AttackData target = null;
     private boolean hitRegistered = false;
-    private long attackDelayMS = 0L;
 
     // Mode
     public final DropdownSetting mode          = new DropdownSetting("Mode",        0, "SINGLE", "SWITCH");
@@ -60,8 +60,8 @@ public class KillAura extends Module {
     public final SliderSetting fov             = new SliderSetting("FOV",          360,  30, 360,   1);
 
     // CPS
-    public final SliderSetting minCPS          = new SliderSetting("Min APS",       14,   1,  20,   1);
-    public final SliderSetting maxCPS          = new SliderSetting("Max APS",       14,   1,  20,   1);
+    public final SliderSetting minCPS          = new SliderSetting("Min CPS",       8,   1,  20,   1);
+    public final SliderSetting maxCPS          = new SliderSetting("Max CPS",      12,   1,  20,   1);
     public final SliderSetting switchDelay     = new SliderSetting("Switch Delay", 150,   0, 1000, 10);
 
     // Rotations
@@ -74,8 +74,8 @@ public class KillAura extends Module {
     public final BooleanSetting throughWalls   = new BooleanSetting("Through Walls",  true);
     public final BooleanSetting requirePress   = new BooleanSetting("Require Press",  false);
     public final BooleanSetting allowMining    = new BooleanSetting("Allow Mining",   true);
-    public final BooleanSetting weaponsOnly    = new BooleanSetting("Weapons Only",   true);
-    public final BooleanSetting allowTools     = new BooleanSetting("Allow Tools",    false);
+    public final BooleanSetting weaponsOnly    = new BooleanSetting("Weapons Only",   false); // Changed to false
+    public final BooleanSetting allowTools     = new BooleanSetting("Allow Tools",    true);  // Changed to true
     public final BooleanSetting inventoryCheck = new BooleanSetting("Inv Check",      true);
     public final BooleanSetting botCheck       = new BooleanSetting("Bot Check",      true);
 
@@ -125,62 +125,67 @@ public class KillAura extends Module {
     }
 
     private long getAttackDelay() {
-        return 1000L / RandomUtil.nextLong((long) minCPS.getValue(), (long) maxCPS.getValue());
+        int min = Math.min((int) minCPS.getValue(), (int) maxCPS.getValue());
+        int max = Math.max((int) minCPS.getValue(), (int) maxCPS.getValue());
+        return 1000L / RandomUtil.nextLong(min, max);
     }
 
     public EntityLivingBase getTarget() {
         return target != null ? target.getEntity() : null;
     }
 
-    public boolean isAttackAllowed() {
-        Scaffold scaffold = (Scaffold) Myau.moduleManager.modules.get(Scaffold.class);
-        if (scaffold.isEnabled()) return false;
-        if (!weaponsOnly.getValue()
-                || ItemUtil.hasRawUnbreakingEnchant()
-                || allowTools.getValue() && ItemUtil.isHoldingTool()) {
-            return !requirePress.getValue()
-                    || KeyBindUtil.isKeyDown(mc.gameSettings.keyBindAttack.getKeyCode());
-        }
-        return false;
-    }
-
     private boolean canAttack() {
+        // Basic checks
+        if (mc.thePlayer == null || mc.theWorld == null) return false;
         if (inventoryCheck.getValue() && mc.currentScreen instanceof GuiContainer) return false;
+        
+        // Check if we need to press attack key
+        if (requirePress.getValue() && !mc.gameSettings.keyBindAttack.isKeyDown()) return false;
+        
+        // Check weapon/tool requirements
+        if (weaponsOnly.getValue() && !ItemUtil.hasRawUnbreakingEnchant() && 
+            !(allowTools.getValue() && ItemUtil.isHoldingTool())) {
+            return false;
+        }
 
-        if (!weaponsOnly.getValue()
-                || ItemUtil.hasRawUnbreakingEnchant()
-                || allowTools.getValue() && ItemUtil.isHoldingTool()) {
+        // Check if player is doing other actions
+        if (((IAccessorPlayerControllerMP) mc.playerController).getIsHittingBlock() && !allowMining.getValue()) return false;
+        if ((ItemUtil.isEating() || ItemUtil.isUsingBow()) && PlayerUtil.isUsingItem()) return false;
 
-            if (((IAccessorPlayerControllerMP) mc.playerController).getIsHittingBlock()) return false;
-            if ((ItemUtil.isEating() || ItemUtil.isUsingBow()) && PlayerUtil.isUsingItem()) return false;
-
+        // Check other modules
+        try {
             AutoHeal autoHeal = (AutoHeal) Myau.moduleManager.modules.get(AutoHeal.class);
-            if (autoHeal.isEnabled() && autoHeal.isSwitching()) return false;
+            if (autoHeal != null && autoHeal.isEnabled() && autoHeal.isSwitching()) return false;
 
             BedNuker bedNuker = (BedNuker) Myau.moduleManager.modules.get(BedNuker.class);
-            if (bedNuker.isEnabled() && bedNuker.isReady()) return false;
+            if (bedNuker != null && bedNuker.isEnabled() && bedNuker.isReady()) return false;
 
             if (Myau.moduleManager.modules.get(Scaffold.class).isEnabled()) return false;
-
-            if (requirePress.getValue()) {
-                return PlayerUtil.isAttacking();
-            } else {
-                return !allowMining.getValue()
-                        || !mc.objectMouseOver.typeOfHit.equals(MovingObjectType.BLOCK)
-                        || !PlayerUtil.isAttacking();
-            }
+        } catch (Exception e) {
+            // Ignore module check errors
         }
-        return false;
+
+        return true;
     }
 
     private boolean isValidTarget(EntityLivingBase entity) {
+        if (entity == null) return false;
         if (!mc.theWorld.loadedEntityList.contains(entity)) return false;
         if (entity == mc.thePlayer || entity == mc.thePlayer.ridingEntity) return false;
         if (entity == mc.getRenderViewEntity() || entity == mc.getRenderViewEntity().ridingEntity) return false;
-        if (entity.deathTime > 0) return false;
-        if (RotationUtil.angleToEntity(entity) > (float) fov.getValue()) return false;
-        if (!throughWalls.getValue() && RotationUtil.rayTrace(entity) != null) return false;
+        if (entity.deathTime > 0 || entity.getHealth() <= 0) return false;
+        
+        // Distance check
+        double distance = mc.thePlayer.getDistanceToEntity(entity);
+        if (distance > swingRange.getValue()) return false;
+        
+        // FOV check
+        if (fov.getValue() < 360 && RotationUtil.angleToEntity(entity) > (float) fov.getValue() / 2.0f) return false;
+        
+        // Wall check
+        if (!throughWalls.getValue() && !mc.thePlayer.canEntityBeSeen(entity)) return false;
 
+        // Entity type checks
         if (entity instanceof EntityOtherPlayerMP) {
             if (!players.getValue()) return false;
             if (TeamUtil.isFriend((EntityPlayer) entity)) return false;
@@ -210,54 +215,69 @@ public class KillAura extends Module {
         return false;
     }
 
-    private boolean isBoxInSwingRange(AxisAlignedBB box) {
-        return RotationUtil.distanceToBox(box) <= swingRange.getValue();
-    }
-
-    private boolean isBoxInAttackRange(AxisAlignedBB box) {
-        return RotationUtil.distanceToBox(box) <= attackRange.getValue();
-    }
-
     private boolean performAttack(float yaw, float pitch) {
+        if (target == null) return false;
         if (Myau.playerStateManager.digging || Myau.playerStateManager.placing) return false;
-        if (attackDelayMS > 0L) return false;
+        
+        // Check attack delay
+        if (!attackTimer.hasTimeElapsed(getAttackDelay())) return false;
 
-        // Stop autoblock before sending attack to prevent multiaction packets
-        // Autoblock re-blocks automatically on the next tick
-        Autoblock autoblock = (Autoblock) Myau.moduleManager.modules.get(Autoblock.class);
-        if (autoblock != null && autoblock.isEnabled() && autoblock.isPlayerBlocking()) {
-            autoblock.stopBlock();
+        // Stop autoblock before attacking
+        try {
+            Autoblock autoblock = (Autoblock) Myau.moduleManager.modules.get(Autoblock.class);
+            if (autoblock != null && autoblock.isEnabled() && autoblock.isPlayerBlocking()) {
+                autoblock.stopBlock();
+            }
+        } catch (Exception e) {
+            // Ignore autoblock errors
         }
 
-        attackDelayMS += getAttackDelay();
+        // Swing arm
         mc.thePlayer.swingItem();
 
-        if ((rotations.getIndex() != 0 || !isBoxInAttackRange(target.getBox()))
-                && RotationUtil.rayTrace(target.getBox(), yaw, pitch, (float) attackRange.getValue()) == null) {
-            return false;
+        // Check if we can actually hit the target
+        EntityLivingBase targetEntity = target.getEntity();
+        double distance = mc.thePlayer.getDistanceToEntity(targetEntity);
+        
+        if (distance <= attackRange.getValue()) {
+            // Send attack packet
+            AttackEvent event = new AttackEvent(targetEntity);
+            EventManager.call(event);
+
+            ((IAccessorPlayerControllerMP) mc.playerController).callSyncCurrentPlayItem();
+            PacketUtil.sendPacket(new C02PacketUseEntity(targetEntity, Action.ATTACK));
+
+            if (mc.playerController.getCurrentGameType() != GameType.SPECTATOR) {
+                PlayerUtil.attackEntity(targetEntity);
+            }
+
+            hitRegistered = true;
+            attackTimer.reset();
+            return true;
         }
 
-        AttackEvent event = new AttackEvent(target.getEntity());
-        EventManager.call(event);
-
-        ((IAccessorPlayerControllerMP) mc.playerController).callSyncCurrentPlayItem();
-        PacketUtil.sendPacket(new C02PacketUseEntity(target.getEntity(), Action.ATTACK));
-
-        if (mc.playerController.getCurrentGameType() != GameType.SPECTATOR)
-            PlayerUtil.attackEntity(target.getEntity());
-
-        hitRegistered = true;
-        return true;
+        attackTimer.reset();
+        return false;
     }
 
     @EventTarget(Priority.LOW)
     public void onUpdate(UpdateEvent event) {
         if (!isEnabled() || event.getType() != EventType.PRE) return;
+        if (mc.thePlayer == null || mc.theWorld == null) return;
 
-        if (attackDelayMS > 0L) attackDelayMS -= 50L;
+        // Find target if we don't have one
+        if (target == null || !isValidTarget(target.getEntity()) || 
+            timer.hasTimeElapsed((long) switchDelay.getValue())) {
+            target = findTarget();
+            timer.reset();
+        }
 
-        if (target != null && canAttack() && isBoxInSwingRange(target.getBox())) {
-            if (rotations.getIndex() == 2 || rotations.getIndex() == 3) {
+        // Attack if we have a target and can attack
+        if (target != null && canAttack()) {
+            EntityLivingBase targetEntity = target.getEntity();
+            
+            // Handle rotations
+            if (rotations.getIndex() == 2 || rotations.getIndex() == 3) { // SILENT or LOCK_VIEW
                 float[] rots = RotationUtil.getRotationsToBox(
                         target.getBox(),
                         event.getYaw(),
@@ -267,33 +287,23 @@ public class KillAura extends Module {
 
                 event.setRotation(rots[0], rots[1], 1);
 
-                if (rotations.getIndex() == 3)
+                if (rotations.getIndex() == 3) // LOCK_VIEW
                     Myau.rotationManager.setRotation(rots[0], rots[1], 1, true);
 
                 if (moveFix.getIndex() != 0 || rotations.getIndex() == 3)
                     event.setPervRotation(rots[0], 1);
-            }
-
-            performAttack(event.getNewYaw(), event.getNewPitch());
-        }
-    }
-
-    @EventTarget
-    public void onTick(TickEvent event) {
-        if (!isEnabled()) return;
-        if (event.getType() == EventType.PRE) {
-            if (target == null
-                    || !isValidTarget(target.getEntity())
-                    || !isBoxInAttackRange(target.getBox())
-                    || !isBoxInSwingRange(target.getBox())
-                    || timer.hasTimeElapsed((long) switchDelay.getValue())) {
-                target = findTarget();
-                timer.reset();
+                    
+                performAttack(rots[0], rots[1]);
+            } else {
+                // No rotations or legit rotations
+                performAttack(event.getYaw(), event.getPitch());
             }
         }
     }
 
     private AttackData findTarget() {
+        if (mc.theWorld == null) return null;
+        
         ArrayList<AttackData> targets = new ArrayList<>();
         for (Entity entity : mc.theWorld.loadedEntityList) {
             if (!(entity instanceof EntityLivingBase)) continue;
@@ -301,14 +311,29 @@ public class KillAura extends Module {
             if (!isValidTarget(living)) continue;
             targets.add(new AttackData(living));
         }
+        
         if (targets.isEmpty()) return null;
 
+        // Sort targets
         switch (sort.getIndex()) {
-            case 0: targets.sort((a, b) -> Double.compare(RotationUtil.distanceToBox(a.getBox()), RotationUtil.distanceToBox(b.getBox()))); break;
-            case 1: targets.sort((a, b) -> Float.compare(a.getEntity().getHealth(), b.getEntity().getHealth())); break;
-            case 2: targets.sort((a, b) -> Integer.compare(a.getEntity().hurtTime, b.getEntity().hurtTime)); break;
-            case 3: targets.sort((a, b) -> Float.compare(RotationUtil.angleToEntity(a.getEntity()), RotationUtil.angleToEntity(b.getEntity()))); break;
+            case 0: // DISTANCE
+                targets.sort((a, b) -> Double.compare(
+                    mc.thePlayer.getDistanceToEntity(a.getEntity()), 
+                    mc.thePlayer.getDistanceToEntity(b.getEntity()))); 
+                break;
+            case 1: // HEALTH
+                targets.sort((a, b) -> Float.compare(a.getEntity().getHealth(), b.getEntity().getHealth())); 
+                break;
+            case 2: // HURT_TIME
+                targets.sort((a, b) -> Integer.compare(b.getEntity().hurtTime, a.getEntity().hurtTime)); 
+                break;
+            case 3: // FOV
+                targets.sort((a, b) -> Float.compare(
+                    RotationUtil.angleToEntity(a.getEntity()), 
+                    RotationUtil.angleToEntity(b.getEntity()))); 
+                break;
         }
+        
         return targets.get(0);
     }
 }
